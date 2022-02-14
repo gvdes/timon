@@ -1,0 +1,152 @@
+import { Request, Response} from 'express';
+import net from 'net';
+import http from 'http';
+
+import ProductMD from '../../models/Product';// modelo de Products
+import WorkpointMD from '../../models/WrkpointsMD';// modelo de WorkPoints
+import ProductLocationsMD from '../../models/ProductLocationsMD';// modelo de Producto vs ubicacion
+import WarehouseSectionMD from '../../models/WarehouseSectionsMD';// modelo de Secciones de almacen}
+
+/**
+ * @param wkp contains the host, port and all of about the workpoint such name, alias, etc
+ * @param timeout time the promise will take to resolve
+ * @returns A promise that always resolve an state true||false about de server status (meaning if server is on or off)
+ */
+export const wkpConnection = async (wkp:any, timeout:number=1000) =>{
+    return new Promise( (resolve,reject) =>{
+        // const host="localhost", port=4400, alias=wkp.alias;
+        const domain = wkp.dominio.split(":");// enabled just in production mode
+        const host=domain[0], port=domain[1], alias=wkp.alias; // just for production mode
+
+        const timer = setTimeout(()=>{
+            resolve({state:false,resume:`${alias} ==> ${host}:${port} ==> TIMEOUT !!!`});
+        }, timeout);
+
+        const socket = net.createConnection(port, host, ()=>{
+            clearTimeout(timer);
+            socket.end();
+            resolve({state:true,wkp,resume:`${alias} ==> ${host}:${port} ==> DONE !!!`});
+        });
+
+        socket.on('error', (err)=>{
+            console.log(err.message);
+            clearTimeout(timer);
+            socket.end();
+            resolve({state:false,err,resume:`${alias} ==> ${host}:${port} ==> FAIL !!!`});
+        });
+    });
+}
+
+/**
+ * @param wkp: Contains the info about the server workpoint such name, alias, etc 
+ * @param method: Method of request, default is GET
+ * @param path: Request route
+ * @param data: data into the object to send in request, it will always be an object
+ * @returns: A promise that always resolves results of remote API
+ */
+export const wkpRequest = async (wkp:any,data:object={},path:string="/fsol/ping",method:string="GET") => {
+    return new Promise((resolve,reject)=>{
+        // setTimeout(()=>{
+            const host="localhost", port=4400, alias=wkp.alias;
+            const domain = wkp.dominio.split(":");
+            // const host=domain[0], port=domain[1]; /// activar solo para produccion!!
+            console.log("Sending REQUEST to:",host,port,alias,"...");
+            const dataSend = JSON.stringify(data);
+            const options = {
+                host: host,
+                port: port,
+                path: path,
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(dataSend)
+                }
+            };
+
+            try {
+                const remotereq = http.request(options, (remoteresp) => {
+                    remoteresp.setEncoding('utf8');
+                    remoteresp.on('data', (chunk) => {
+                        console.log("Response from remote server: ");
+                        let resconv = JSON.parse(chunk);
+                        resolve({state:true,wkpresp:resconv});
+                    });
+                });
+                
+                remotereq.on('error', error =>{ console.log(error); resolve({state:false,error:`${alias} ==> ${error.message}`}); });
+                remotereq.write(dataSend);
+                remotereq.end();
+            } catch (error) {
+                console.log(error);
+                resolve({state:false,error});
+            }
+        // },300);
+    });
+}
+
+/**
+ * @function: this function it will try make a ping and request for eachone workpoints to know if server its on and responds to requests
+ * @returns: it will return an object that contains workpoints (servers) status
+ */
+export const PINGS = async ( req:Request,resp:Response) =>{
+    const wkpsreq = await WorkpointMD.findAll();
+    const wkps:Array<any> = JSON.parse(JSON.stringify(wkpsreq)).filter( (w:any) => (w.active&&w.id!=1) );
+    // const wkps:Array<any> = JSON.parse(JSON.stringify(wkpsreq));
+    const resume:any = {short:[], on:[], off:[]};
+
+    try {
+        for await (const wkp of wkps) {
+            const con:any = await wkpConnection(wkp);
+            console.log(con.resume);
+            resume.short.push(con.resume);
+
+            if(con.state){
+                resume.on.push({conection:true,wkp,api:null});
+                const remoteresp = await wkpRequest(wkp,{wkp});
+                console.log(remoteresp);
+            }else{
+                resume.off.push({conection:false,wkp,api:null});
+            }
+        }
+        
+        resp.json({resume});
+    } catch (error) { resp.status(500).json({resume}); }
+}
+
+export const MASSIVELOCATIONS = async(req:Request,resp:Response)=>{
+    let rows:Array<any> = req.body.rows; // filas que se resiven desde el cliente (filas del excel)
+    let idwrh:number = req.body.idwrh; // id del almacen sobre el que se va a trabaja
+
+    let productosNoEncontrados = []; // store para almacen de productos encontrados y no encontrados
+    let ubicacionesNoEncontradas = [];// almacen de ubicaciones encontradas y no encontradas
+
+    let porunir=[]; // almacen para posibles uniones
+    let uniones:any={ exitosas:[], erroneas:[] }; // uniones completadas y uniones que fracasaron
+    let yaestaban=[]; // uniones que ya existian
+
+    for await (const row of rows) {// iteracion de filas del excel para asociar producto vs ubicacion(es)
+        const prod = await ProductMD.findOne({ where:{ code:row.code } });// busqueda del producto
+        
+        if(prod){
+            const product = JSON.parse(JSON.stringify(prod));// parseo del producto encontrado
+            const paths = row.location.split(",");// obtencion de las ubicaciones a asociar (viene separads por coma desde el excel)
+
+            for await(const path of paths) {// recorrer unicaciones spliteadas
+                const location:any = await WarehouseSectionMD.findOne({ where:{path,_celler:idwrh} });// se valida laexistencia de la ubicacion
+                location ? 
+                    porunir.push({ code:product.code, _product:product.id, _location:location.id,path }):// producto y ubicacion que si pueden asociadas
+                    ubicacionesNoEncontradas.push(path);// se agrega al store de ubicaciones no entradas
+            }
+        }else{ productosNoEncontrados.push(row.code); }// se agrega al store de productos no encontrados
+    }
+
+    for await (const row of porunir) { // recorrer productos vs ubicaciones que seran unidos
+        const exAsoc = await ProductLocationsMD.findOne({ where:{_product:row._product,_location:row._location} });// validacion de existencia de asociacion
+        if(!exAsoc){// la asosiacion no existe
+            const Asoc = await ProductLocationsMD.create({_product:row._product,_location:row._location});// inserta/crea la asociacion de producto vs ubicacion
+            Asoc ? uniones.exitosas.push(row) : uniones.erroneas.push(row);// valida la creacion erronea o correcta del producto vs ubicacion 
+        }else{ yaestaban.push(row); }// si la asociacion existe, la agrega al store de ubicacion vs producto existente
+    }
+
+    resp.json({ filasprocesadas:rows.length, productosNoEncontrados, ubicacionesNoEncontradas, porunir, uniones, yaestaban });
+}

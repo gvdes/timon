@@ -1,0 +1,1 @@
+{"version":3,"file":"WrokpointsCont.js","sourceRoot":"","sources":["../../../controllers/vizapi/WrokpointsCont.ts"],"names":[],"mappings":";;;;;;;;;;;;;;AACA,2EAAmD;AAEnD,MAAM,GAAG,GAAG,CAAO,GAAW,EAAE,IAAa,EAAG,EAAE;IAC9C,MAAM,UAAU,GAAG,MAAM,qBAAW,CAAC,OAAO,EAAE,CAAC;IAC/C,IAAI,CAAC,IAAI,CAAC,EAAE,UAAU,EAAE,CAAC,CAAC;AAC9B,CAAC,CAAA,CAAA;AAED,kBAAe,EAAE,GAAG,EAAE,CAAA"}
