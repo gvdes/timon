@@ -77,6 +77,7 @@ export const SYNCCLIENTS = async( req:Request, resp:Response)=>{
                 }
             }else{
                 resumen.clientes = "Nada por actualizar";
+                return resp.json({resumen});
             }
         } catch (error) {
             
