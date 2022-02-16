@@ -8,7 +8,7 @@ import { wkpRequest, wkpConnection } from '../vizapi/HelpresCont';
 const fsol = accdb.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process.env.FSOLDB};Persist Security Info=False;`);
 
 export const SYNCCLIENTS = async( req:Request, resp:Response)=>{
-
+    console.log("Iniciando sincronizacion de clientes..");
     let cambiosdetarifa:Array<Object> = [];
     const today = moment().format('YYYY/MM/DD'); // se obtiene la fecha del dia en curso
     let query = `SELECT * FROM F_CLI WHERE FUMCLI=#${today}#;`;// query por default a ejecutar

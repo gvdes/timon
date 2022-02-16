@@ -27,6 +27,7 @@ const HelpresCont_1 = require("../vizapi/HelpresCont");
 const fsol = node_adodb_1.default.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process.env.FSOLDB};Persist Security Info=False;`);
 const SYNCCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
     var e_1, _a;
+    console.log("Iniciando sincronizacion de clientes..");
     let cambiosdetarifa = [];
     const today = (0, moment_1.default)().format('YYYY/MM/DD'); // se obtiene la fecha del dia en curso
     let query = `SELECT * FROM F_CLI WHERE FUMCLI=#${today}#;`; // query por default a ejecutar
