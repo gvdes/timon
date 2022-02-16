@@ -1,11 +1,12 @@
 import { Request, Response} from 'express';
 import net from 'net';
 import http from 'http';
+import { Op } from "sequelize";
 
 import ProductMD from '../../models/Product';// modelo de Products
 import WorkpointMD from '../../models/WrkpointsMD';// modelo de WorkPoints
 import ProductLocationsMD from '../../models/ProductLocationsMD';// modelo de Producto vs ubicacion
-import WarehouseSectionMD from '../../models/WarehouseSectionsMD';// modelo de Secciones de almacen}
+import WarehouseSectionMD from '../../models/WarehouseSectionsMD';// modelo de Secciones de almacen
 
 /**
  * @param wkp contains the host, port and all of about the workpoint such name, alias, etc
@@ -16,7 +17,8 @@ export const wkpConnection = async (wkp:any, timeout:number=1000) =>{
     return new Promise( (resolve,reject) =>{
         // const host="localhost", port=4400, alias=wkp.alias;
         const domain = wkp.dominio.split(":");// enabled just in production mode
-        const host=domain[0], port=domain[1], alias=wkp.alias; // just for production mode
+        // const host=domain[0], port=domain[1], alias=wkp.alias; // just for production mode with dinamic port
+        const host=domain[0], port=44140, alias=wkp.alias; // just for production mode
 
         const timer = setTimeout(()=>{
             resolve({state:false,resume:`${alias} ==> ${host}:${port} ==> TIMEOUT !!!`});
@@ -47,10 +49,11 @@ export const wkpConnection = async (wkp:any, timeout:number=1000) =>{
 export const wkpRequest = async (wkp:any,data:object={},path:string="/fsol/ping",method:string="GET") => {
     return new Promise((resolve,reject)=>{
         // setTimeout(()=>{
-            const host="localhost", port=4400, alias=wkp.alias;
+            // const host="localhost", port=4400, alias=wkp.alias;
             const domain = wkp.dominio.split(":");
-            // const host=domain[0], port=domain[1]; /// activar solo para produccion!!
-            console.log("Sending REQUEST to:",host,port,alias,"...");
+            // const host=domain[0], port=domain[1], alias=wkp.alias; /// just for production mode with dynamic port
+            const host=domain[0], port=44140, alias=wkp.alias; /// just for production mode!!
+            console.log("Sending REQUEST to:",`${host}:${port}`,alias,"...");
             const dataSend = JSON.stringify(data);
             const options = {
                 host: host,
@@ -68,12 +71,24 @@ export const wkpRequest = async (wkp:any,data:object={},path:string="/fsol/ping"
                     remoteresp.setEncoding('utf8');
                     remoteresp.on('data', (chunk) => {
                         console.log("Response from remote server: ");
-                        let resconv = JSON.parse(chunk);
-                        resolve({state:true,wkpresp:resconv});
+                        try {
+                            let resconv = JSON.parse(chunk);
+                            resolve({state:true,wkpresp:resconv});
+                        } catch (error) {
+                            resolve({state:false,wkpresp:"PUMBA no devolvio una respuesta valida, revise que esté instalado, esté activo y que el puerto de conexion esté disponible"});
+                        }
                     });
                 });
                 
-                remotereq.on('error', error =>{ console.log(error); resolve({state:false,error:`${alias} ==> ${error.message}`}); });
+                remotereq.on('error', error =>{
+                    const ERROR = {
+                        wkpresp:"PUMBA no devolvio una respuesta valida, revise que esté instalado, esté activo y que el puerto de conexion esté disponible",
+                        state:false,
+                        error:`${alias} ==> ${error.message}`
+                    };
+                    console.log(error);
+                    resolve(ERROR);
+                });
                 remotereq.write(dataSend);
                 remotereq.end();
             } catch (error) {
@@ -89,28 +104,51 @@ export const wkpRequest = async (wkp:any,data:object={},path:string="/fsol/ping"
  * @returns: it will return an object that contains workpoints (servers) status
  */
 export const PINGS = async ( req:Request,resp:Response) =>{
-    const wkpsreq = await WorkpointMD.findAll();
-    const wkps:Array<any> = JSON.parse(JSON.stringify(wkpsreq)).filter( (w:any) => (w.active&&w.id!=1) );
-    // const wkps:Array<any> = JSON.parse(JSON.stringify(wkpsreq));
-    const resume:any = {short:[], on:[], off:[]};
+    const wkpreq = req.body.sucursal;
 
-    try {
-        for await (const wkp of wkps) {
+    if(wkpreq){
+        const wkp:any = await WorkpointMD.findOne({ where:
+            {
+                [Op.or]:[
+                    { id:wkpreq },
+                    { alias:wkpreq }
+                ]
+            } 
+        });
+        
+        if(wkp&&wkp.active==1){
             const con:any = await wkpConnection(wkp);
-            console.log(con.resume);
-            resume.short.push(con.resume);
 
             if(con.state){
-                resume.on.push({conection:true,wkp,api:null});
-                const remoteresp = await wkpRequest(wkp,{wkp});
-                console.log(remoteresp);
-            }else{
-                resume.off.push({conection:false,wkp,api:null});
-            }
+                const remoteresp = await wkpRequest(wkp,{wkp});//the first wkp is to do test conection, second wkp is for show in console
+                resp.json({wkp,con,remoteresp});
+            }else{ resp.status(502).json({wkp,con}); }
+        }else{
+            resp.status(400).json({"No hables tus mierdas meriyein":wkp?`esta sucursal no esta activa (y-_-)y`:`esta sucursal ${wkpreq} ni existe (y-_-)y`});
         }
-        
-        resp.json({resume});
-    } catch (error) { resp.status(500).json({resume}); }
+    }else{
+        const wkpsQuery = await WorkpointMD.findAll();
+        const wkps:Array<any> = JSON.parse(JSON.stringify(wkpsQuery)).filter( (w:any) => (w.active&&w.id!=1) );
+        const resume:any = { short:[], on:[], off:[] };
+
+        try {
+            for await (const wkp of wkps) {
+                const con:any = await wkpConnection(wkp);
+                console.log(con.resume);
+                resume.short.push(con.resume);
+
+                if(con.state){
+                    resume.on.push({conection:true,wkp,api:null});
+                    const remoteresp = await wkpRequest(wkp,{wkp});//the first wkp is to do test conection, second wkp is for show in console
+                    console.log(remoteresp);
+                }else{
+                    resume.off.push({conection:false,wkp,api:null});
+                }
+            }
+            
+            resp.json({resume});
+        } catch (error) { resp.status(500).json({resume}); }
+    }
 }
 
 export const MASSIVELOCATIONS = async(req:Request,resp:Response)=>{

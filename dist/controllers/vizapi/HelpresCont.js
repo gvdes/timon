@@ -22,10 +22,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MASSIVELOCATIONS = exports.PINGS = exports.wkpRequest = exports.wkpConnection = void 0;
 const net_1 = __importDefault(require("net"));
 const http_1 = __importDefault(require("http"));
+const sequelize_1 = require("sequelize");
 const Product_1 = __importDefault(require("../../models/Product")); // modelo de Products
 const WrkpointsMD_1 = __importDefault(require("../../models/WrkpointsMD")); // modelo de WorkPoints
 const ProductLocationsMD_1 = __importDefault(require("../../models/ProductLocationsMD")); // modelo de Producto vs ubicacion
-const WarehouseSectionsMD_1 = __importDefault(require("../../models/WarehouseSectionsMD")); // modelo de Secciones de almacen}
+const WarehouseSectionsMD_1 = __importDefault(require("../../models/WarehouseSectionsMD")); // modelo de Secciones de almacen
 /**
  * @param wkp contains the host, port and all of about the workpoint such name, alias, etc
  * @param timeout time the promise will take to resolve
@@ -35,7 +36,8 @@ const wkpConnection = (wkp, timeout = 1000) => __awaiter(void 0, void 0, void 0,
     return new Promise((resolve, reject) => {
         // const host="localhost", port=4400, alias=wkp.alias;
         const domain = wkp.dominio.split(":"); // enabled just in production mode
-        const host = domain[0], port = domain[1], alias = wkp.alias; // just for production mode
+        // const host=domain[0], port=domain[1], alias=wkp.alias; // just for production mode with dinamic port
+        const host = domain[0], port = 44140, alias = wkp.alias; // just for production mode
         const timer = setTimeout(() => {
             resolve({ state: false, resume: `${alias} ==> ${host}:${port} ==> TIMEOUT !!!` });
         }, timeout);
@@ -63,10 +65,11 @@ exports.wkpConnection = wkpConnection;
 const wkpRequest = (wkp, data = {}, path = "/fsol/ping", method = "GET") => __awaiter(void 0, void 0, void 0, function* () {
     return new Promise((resolve, reject) => {
         // setTimeout(()=>{
-        const host = "localhost", port = 4400, alias = wkp.alias;
+        // const host="localhost", port=4400, alias=wkp.alias;
         const domain = wkp.dominio.split(":");
-        // const host=domain[0], port=domain[1]; /// activar solo para produccion!!
-        console.log("Sending REQUEST to:", host, port, alias, "...");
+        // const host=domain[0], port=domain[1], alias=wkp.alias; /// just for production mode with dynamic port
+        const host = domain[0], port = 44140, alias = wkp.alias; /// just for production mode!!
+        console.log("Sending REQUEST to:", `${host}:${port}`, alias, "...");
         const dataSend = JSON.stringify(data);
         const options = {
             host: host,
@@ -83,11 +86,24 @@ const wkpRequest = (wkp, data = {}, path = "/fsol/ping", method = "GET") => __aw
                 remoteresp.setEncoding('utf8');
                 remoteresp.on('data', (chunk) => {
                     console.log("Response from remote server: ");
-                    let resconv = JSON.parse(chunk);
-                    resolve({ state: true, wkpresp: resconv });
+                    try {
+                        let resconv = JSON.parse(chunk);
+                        resolve({ state: true, wkpresp: resconv });
+                    }
+                    catch (error) {
+                        resolve({ state: false, wkpresp: "PUMBA no devolvio una respuesta valida, revise que esté instalado, esté activo y que el puerto de conexion esté disponible" });
+                    }
                 });
             });
-            remotereq.on('error', error => { console.log(error); resolve({ state: false, error: `${alias} ==> ${error.message}` }); });
+            remotereq.on('error', error => {
+                const ERROR = {
+                    wkpresp: "PUMBA no devolvio una respuesta valida, revise que esté instalado, esté activo y que el puerto de conexion esté disponible",
+                    state: false,
+                    error: `${alias} ==> ${error.message}`
+                };
+                console.log(error);
+                resolve(ERROR);
+            });
             remotereq.write(dataSend);
             remotereq.end();
         }
@@ -105,38 +121,62 @@ exports.wkpRequest = wkpRequest;
  */
 const PINGS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
     var e_1, _a;
-    const wkpsreq = yield WrkpointsMD_1.default.findAll();
-    const wkps = JSON.parse(JSON.stringify(wkpsreq)).filter((w) => (w.active && w.id != 1));
-    // const wkps:Array<any> = JSON.parse(JSON.stringify(wkpsreq));
-    const resume = { short: [], on: [], off: [] };
-    try {
-        try {
-            for (var wkps_1 = __asyncValues(wkps), wkps_1_1; wkps_1_1 = yield wkps_1.next(), !wkps_1_1.done;) {
-                const wkp = wkps_1_1.value;
-                const con = yield (0, exports.wkpConnection)(wkp);
-                console.log(con.resume);
-                resume.short.push(con.resume);
-                if (con.state) {
-                    resume.on.push({ conection: true, wkp, api: null });
-                    const remoteresp = yield (0, exports.wkpRequest)(wkp, { wkp });
-                    console.log(remoteresp);
-                }
-                else {
-                    resume.off.push({ conection: false, wkp, api: null });
-                }
+    const wkpreq = req.body.sucursal;
+    if (wkpreq) {
+        const wkp = yield WrkpointsMD_1.default.findOne({ where: {
+                [sequelize_1.Op.or]: [
+                    { id: wkpreq },
+                    { alias: wkpreq }
+                ]
+            }
+        });
+        if (wkp && wkp.active == 1) {
+            const con = yield (0, exports.wkpConnection)(wkp);
+            if (con.state) {
+                const remoteresp = yield (0, exports.wkpRequest)(wkp, { wkp }); //the first wkp is to do test conection, second wkp is for show in console
+                resp.json({ wkp, con, remoteresp });
+            }
+            else {
+                resp.status(502).json({ wkp, con });
             }
         }
-        catch (e_1_1) { e_1 = { error: e_1_1 }; }
-        finally {
-            try {
-                if (wkps_1_1 && !wkps_1_1.done && (_a = wkps_1.return)) yield _a.call(wkps_1);
-            }
-            finally { if (e_1) throw e_1.error; }
+        else {
+            resp.status(400).json({ "No hables tus mierdas meriyein": wkp ? `esta sucursal no esta activa (y-_-)y` : `esta sucursal ${wkpreq} ni existe (y-_-)y` });
         }
-        resp.json({ resume });
     }
-    catch (error) {
-        resp.status(500).json({ resume });
+    else {
+        const wkpsQuery = yield WrkpointsMD_1.default.findAll();
+        const wkps = JSON.parse(JSON.stringify(wkpsQuery)).filter((w) => (w.active && w.id != 1));
+        const resume = { short: [], on: [], off: [] };
+        try {
+            try {
+                for (var wkps_1 = __asyncValues(wkps), wkps_1_1; wkps_1_1 = yield wkps_1.next(), !wkps_1_1.done;) {
+                    const wkp = wkps_1_1.value;
+                    const con = yield (0, exports.wkpConnection)(wkp);
+                    console.log(con.resume);
+                    resume.short.push(con.resume);
+                    if (con.state) {
+                        resume.on.push({ conection: true, wkp, api: null });
+                        const remoteresp = yield (0, exports.wkpRequest)(wkp, { wkp }); //the first wkp is to do test conection, second wkp is for show in console
+                        console.log(remoteresp);
+                    }
+                    else {
+                        resume.off.push({ conection: false, wkp, api: null });
+                    }
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (wkps_1_1 && !wkps_1_1.done && (_a = wkps_1.return)) yield _a.call(wkps_1);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
+            resp.json({ resume });
+        }
+        catch (error) {
+            resp.status(500).json({ resume });
+        }
     }
 });
 exports.PINGS = PINGS;
