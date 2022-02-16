@@ -58,7 +58,7 @@ export const SYNCCLIENTS = async( req:Request, resp:Response)=>{
 
                 if(command=="sync"){
                     const workpoints = await WorkpointMD.findAll();
-                    const wkps:Array<any> = JSON.parse(JSON.stringify(workpoints)).filter( (w:any) => (w.active&&w.id!=1) );
+                    const wkps:Array<any> = JSON.parse(JSON.stringify(workpoints)).filter( (w:any) => (w.active&&w.id>2) );
 
                     for await (const wkp of wkps) {
                         const con:any = await wkpConnection(wkp);

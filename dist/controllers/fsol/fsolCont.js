@@ -79,7 +79,7 @@ const SYNCCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* (
                 }
                 if (command == "sync") {
                     const workpoints = yield WrkpointsMD_1.default.findAll();
-                    const wkps = JSON.parse(JSON.stringify(workpoints)).filter((w) => (w.active && w.id != 1));
+                    const wkps = JSON.parse(JSON.stringify(workpoints)).filter((w) => (w.active && w.id > 2));
                     try {
                         for (var wkps_1 = __asyncValues(wkps), wkps_1_1; wkps_1_1 = yield wkps_1.next(), !wkps_1_1.done;) {
                             const wkp = wkps_1_1.value;
