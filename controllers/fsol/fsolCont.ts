@@ -1,6 +1,7 @@
 import { Request, response, Response } from 'express'
 import accdb from 'node-adodb'
 import moment from 'moment';
+import { Op } from "sequelize";
 
 import WorkpointMD from '../../models/WrkpointsMD';
 import { wkpRequest, wkpConnection } from '../vizapi/HelpresCont';
@@ -9,6 +10,7 @@ const fsol = accdb.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process
 
 export const SYNCCLIENTS = async( req:Request, resp:Response)=>{
     console.log("Iniciando sincronizacion de clientes..");
+    const wkpreq = req.body.sucursal;
     let cambiosdetarifa:Array<Object> = [];
     const today = moment().format('YYYY/MM/DD'); // se obtiene la fecha del dia en curso
     let query = `SELECT * FROM F_CLI WHERE FUMCLI=#${today}#;`;// query por default a ejecutar
@@ -44,6 +46,7 @@ export const SYNCCLIENTS = async( req:Request, resp:Response)=>{
         try {
             let clrows:Array<Object> = await fsol.query(query); // se ejecuta el query y se obtienen filas
             cllength = clrows.length; //tamaño de las filas
+            console.log(cllength);
 
             if(cllength){
                 rows = clrows.map( (cl:any) => { // formateando las filas
@@ -52,28 +55,54 @@ export const SYNCCLIENTS = async( req:Request, resp:Response)=>{
                                 return cl;
                             });
 
-                if(command=="ver"){
+                if(command=="ver"){// opcion para solo visualizar
                     return resp.json({"accion":command,inicio:from,fin:to,resumen,cambiosdetarifa});
                 }
 
-                if(command=="sync"){
-                    const workpoints = await WorkpointMD.findAll();
-                    const wkps:Array<any> = JSON.parse(JSON.stringify(workpoints)).filter( (w:any) => (w.active&&w.id>2) );
+                if(command=="sync"){//opcion para sincronizar
+                    if(wkpreq){// si solo se solicita la actualizacion en una tienda
+                        const wkp:any = await WorkpointMD.findOne({ where:
+                            {
+                                [Op.or]:[
+                                    { id:wkpreq },
+                                    { alias:wkpreq }
+                                ]
+                            } 
+                        });
 
-                    for await (const wkp of wkps) {
-                        const con:any = await wkpConnection(wkp);
-                        
-                        if(con.state){
-                            const action:any = await wkpRequest(wkp,{rows},"/fsol/sync/clients","POST");
-                            const PING = `${wkp.alias} ==> OK!!`;
-                            console.log(PING,action);
-                            resumen.goals.push(`${wkp.alias} ==> PING OK!!`, action);
+                        if(wkp&&wkp.active==1){// validate workpoint existence and this is active
+                            const con:any = await wkpConnection(wkp);//test to knows there are connection
+                
+                            if(con.state){//if there are conection
+                                console.log("Conexion exitosa");
+                                const action:any = await wkpRequest(wkp,{rows},"/fsol/sync/clients","POST");
+                                const PING = `${wkp.alias} ==> OK!!`;
+                                console.log(PING,action);
+                                resp.json({wkp,con,action});// send response about request
+                            }else{ resp.status(502).json({wkp,con}); }// if there arent response, return a error server
                         }else{
-                            const PING = `${wkp.alias} ==> REJECT!!`;
-                            resumen.fails.push(PING); }
-                    }
+                            resp.status(400).json({"No hables tus mierdas meriyein":wkp?`esta sucursal no esta activa (y-_-)y`:`${wkpreq} ni existe (y-_-)y`});//if there are connection, return error server
+                        }
+                    }else{// si la actualizacion debe ser completa (en todas las tiendas)
+                        const workpoints = await WorkpointMD.findAll();
+                        const wkps:Array<any> = JSON.parse(JSON.stringify(workpoints)).filter( (w:any) => (w.active&&w.id>2) );
 
-                    return resp.json({"accion":command,inicio:from,fin:to,resumen,cambiosdetarifa});
+                        for await (const wkp of wkps) {
+                            const con:any = await wkpConnection(wkp);
+                            
+                            if(con.state){
+                                const action:any = await wkpRequest(wkp,{rows},"/fsol/sync/clients","POST");
+                                const PING = `${wkp.alias} ==> OK!!`;
+                                console.log(PING,action);
+                                resumen.goals.push(`${wkp.alias} ==> PING OK!!`, action);
+                            }else{
+                                const PING = `${wkp.alias} ==> REJECT!!`;
+                                resumen.fails.push(PING);
+                            }
+                        }
+
+                        return resp.json({"accion":command,inicio:from,fin:to,resumen,cambiosdetarifa});
+                    }
                 }
             }else{
                 resumen.clientes = "Nada por actualizar";

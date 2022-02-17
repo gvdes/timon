@@ -64,11 +64,11 @@ exports.wkpConnection = wkpConnection;
  */
 const wkpRequest = (wkp, data = {}, path = "/fsol/ping", method = "GET") => __awaiter(void 0, void 0, void 0, function* () {
     return new Promise((resolve, reject) => {
-        // setTimeout(()=>{
-        // const host="localhost", port=4400, alias=wkp.alias;
+        let env = process.env.MODE || "dev";
         const domain = wkp.dominio.split(":");
-        // const host=domain[0], port=domain[1], alias=wkp.alias; /// just for production mode with dynamic port
-        const host = domain[0], port = 44140, alias = wkp.alias; /// just for production mode!!
+        const host = env == "dev" ? "localhost" : domain[0];
+        const alias = wkp.alias;
+        const port = 44140; // domain[1] --> puerto
         console.log("Sending REQUEST to:", `${host}:${port}`, alias, "...");
         const dataSend = JSON.stringify(data);
         const options = {
@@ -111,7 +111,6 @@ const wkpRequest = (wkp, data = {}, path = "/fsol/ping", method = "GET") => __aw
             console.log(error);
             resolve({ state: false, error });
         }
-        // },300);
     });
 });
 exports.wkpRequest = wkpRequest;
@@ -122,7 +121,8 @@ exports.wkpRequest = wkpRequest;
 const PINGS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
     var e_1, _a;
     const wkpreq = req.body.sucursal;
-    if (wkpreq) {
+    if (wkpreq) { // puede resivir una sucursal
+        // look for workpoint to do the tests
         const wkp = yield WrkpointsMD_1.default.findOne({ where: {
                 [sequelize_1.Op.or]: [
                     { id: wkpreq },
@@ -130,32 +130,32 @@ const PINGS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
                 ]
             }
         });
-        if (wkp && wkp.active == 1) {
-            const con = yield (0, exports.wkpConnection)(wkp);
-            if (con.state) {
-                const remoteresp = yield (0, exports.wkpRequest)(wkp, { wkp }); //the first wkp is to do test conection, second wkp is for show in console
-                resp.json({ wkp, con, remoteresp });
+        if (wkp && wkp.active == 1) { // validate workpoint existence and this is active
+            const con = yield (0, exports.wkpConnection)(wkp); //test to knows there are connection
+            if (con.state) { //if there are conection
+                const remoteresp = yield (0, exports.wkpRequest)(wkp, { wkp }); // try make a request (the first wkp is to do test conection, second wkp is for show in console)
+                resp.json({ wkp, con, remoteresp }); // send response about request
             }
             else {
                 resp.status(502).json({ wkp, con });
-            }
+            } // if there arent response, return a error server
         }
         else {
-            resp.status(400).json({ "No hables tus mierdas meriyein": wkp ? `esta sucursal no esta activa (y-_-)y` : `esta sucursal ${wkpreq} ni existe (y-_-)y` });
+            resp.status(400).json({ "No hables tus mierdas meriyein": wkp ? `esta sucursal no esta activa (y-_-)y` : `${wkpreq} ni existe (y-_-)y` }); //if there are connection, return error server
         }
     }
-    else {
-        const wkpsQuery = yield WrkpointsMD_1.default.findAll();
-        const wkps = JSON.parse(JSON.stringify(wkpsQuery)).filter((w) => (w.active && w.id != 1));
+    else { // if workpoint missing, it will iterate al workpoints
+        const wkpsQuery = yield WrkpointsMD_1.default.findAll(); //obtiene todas las sucursales
+        const wkps = JSON.parse(JSON.stringify(wkpsQuery)).filter((w) => (w.active && w.id != 1)); //filtra las sucursales a iterar
         const resume = { short: [], on: [], off: [] };
         try {
             try {
                 for (var wkps_1 = __asyncValues(wkps), wkps_1_1; wkps_1_1 = yield wkps_1.next(), !wkps_1_1.done;) {
                     const wkp = wkps_1_1.value;
-                    const con = yield (0, exports.wkpConnection)(wkp);
+                    const con = yield (0, exports.wkpConnection)(wkp); //test to know if there are connection 
                     console.log(con.resume);
-                    resume.short.push(con.resume);
-                    if (con.state) {
+                    resume.short.push(con.resume); // ad short resume as good response
+                    if (con.state) { //check if connection was exit
                         resume.on.push({ conection: true, wkp, api: null });
                         const remoteresp = yield (0, exports.wkpRequest)(wkp, { wkp }); //the first wkp is to do test conection, second wkp is for show in console
                         console.log(remoteresp);

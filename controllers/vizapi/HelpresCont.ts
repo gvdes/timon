@@ -48,54 +48,55 @@ export const wkpConnection = async (wkp:any, timeout:number=1000) =>{
  */
 export const wkpRequest = async (wkp:any,data:object={},path:string="/fsol/ping",method:string="GET") => {
     return new Promise((resolve,reject)=>{
-        // setTimeout(()=>{
-            // const host="localhost", port=4400, alias=wkp.alias;
-            const domain = wkp.dominio.split(":");
-            // const host=domain[0], port=domain[1], alias=wkp.alias; /// just for production mode with dynamic port
-            const host=domain[0], port=44140, alias=wkp.alias; /// just for production mode!!
-            console.log("Sending REQUEST to:",`${host}:${port}`,alias,"...");
-            const dataSend = JSON.stringify(data);
-            const options = {
-                host: host,
-                port: port,
-                path: path,
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Content-Length': Buffer.byteLength(dataSend)
-                }
-            };
+        let env = process.env.MODE||"dev";
+        const domain = wkp.dominio.split(":");
 
-            try {
-                const remotereq = http.request(options, (remoteresp) => {
-                    remoteresp.setEncoding('utf8');
-                    remoteresp.on('data', (chunk) => {
-                        console.log("Response from remote server: ");
-                        try {
-                            let resconv = JSON.parse(chunk);
-                            resolve({state:true,wkpresp:resconv});
-                        } catch (error) {
-                            resolve({state:false,wkpresp:"PUMBA no devolvio una respuesta valida, revise que esté instalado, esté activo y que el puerto de conexion esté disponible"});
-                        }
-                    });
-                });
-                
-                remotereq.on('error', error =>{
-                    const ERROR = {
-                        wkpresp:"PUMBA no devolvio una respuesta valida, revise que esté instalado, esté activo y que el puerto de conexion esté disponible",
-                        state:false,
-                        error:`${alias} ==> ${error.message}`
-                    };
-                    console.log(error);
-                    resolve(ERROR);
-                });
-                remotereq.write(dataSend);
-                remotereq.end();
-            } catch (error) {
-                console.log(error);
-                resolve({state:false,error});
+        const host = env=="dev"?"localhost":domain[0];
+        const alias = wkp.alias;
+        const port = 44140;// domain[1] --> puerto
+
+        console.log("Sending REQUEST to:",`${host}:${port}`,alias,"...");
+        const dataSend = JSON.stringify(data);
+        const options = {
+            host: host,
+            port: port,
+            path: path,
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(dataSend)
             }
-        // },300);
+        };
+
+        try {
+            const remotereq = http.request(options, (remoteresp) => {
+                remoteresp.setEncoding('utf8');
+                remoteresp.on('data', (chunk) => {
+                    console.log("Response from remote server: ");
+                    try {
+                        let resconv = JSON.parse(chunk);
+                        resolve({state:true,wkpresp:resconv});
+                    } catch (error) {
+                        resolve({state:false,wkpresp:"PUMBA no devolvio una respuesta valida, revise que esté instalado, esté activo y que el puerto de conexion esté disponible"});
+                    }
+                });
+            });
+            
+            remotereq.on('error', error =>{
+                const ERROR = {
+                    wkpresp:"PUMBA no devolvio una respuesta valida, revise que esté instalado, esté activo y que el puerto de conexion esté disponible",
+                    state:false,
+                    error:`${alias} ==> ${error.message}`
+                };
+                console.log(error);
+                resolve(ERROR);
+            });
+            remotereq.write(dataSend);
+            remotereq.end();
+        } catch (error) {
+            console.log(error);
+            resolve({state:false,error});
+        }
     });
 }
 
@@ -106,7 +107,8 @@ export const wkpRequest = async (wkp:any,data:object={},path:string="/fsol/ping"
 export const PINGS = async ( req:Request,resp:Response) =>{
     const wkpreq = req.body.sucursal;
 
-    if(wkpreq){
+    if(wkpreq){// puede resivir una sucursal
+        // look for workpoint to do the tests
         const wkp:any = await WorkpointMD.findOne({ where:
             {
                 [Op.or]:[
@@ -116,28 +118,28 @@ export const PINGS = async ( req:Request,resp:Response) =>{
             } 
         });
         
-        if(wkp&&wkp.active==1){
-            const con:any = await wkpConnection(wkp);
+        if(wkp&&wkp.active==1){// validate workpoint existence and this is active
+            const con:any = await wkpConnection(wkp);//test to knows there are connection
 
-            if(con.state){
-                const remoteresp = await wkpRequest(wkp,{wkp});//the first wkp is to do test conection, second wkp is for show in console
-                resp.json({wkp,con,remoteresp});
-            }else{ resp.status(502).json({wkp,con}); }
+            if(con.state){//if there are conection
+                const remoteresp = await wkpRequest(wkp,{wkp});// try make a request (the first wkp is to do test conection, second wkp is for show in console)
+                resp.json({wkp,con,remoteresp});// send response about request
+            }else{ resp.status(502).json({wkp,con}); }// if there arent response, return a error server
         }else{
-            resp.status(400).json({"No hables tus mierdas meriyein":wkp?`esta sucursal no esta activa (y-_-)y`:`esta sucursal ${wkpreq} ni existe (y-_-)y`});
+            resp.status(400).json({"No hables tus mierdas meriyein":wkp?`esta sucursal no esta activa (y-_-)y`:`${wkpreq} ni existe (y-_-)y`});//if there are connection, return error server
         }
-    }else{
-        const wkpsQuery = await WorkpointMD.findAll();
-        const wkps:Array<any> = JSON.parse(JSON.stringify(wkpsQuery)).filter( (w:any) => (w.active&&w.id!=1) );
+    }else{// if workpoint missing, it will iterate al workpoints
+        const wkpsQuery = await WorkpointMD.findAll();//obtiene todas las sucursales
+        const wkps:Array<any> = JSON.parse(JSON.stringify(wkpsQuery)).filter( (w:any) => (w.active&&w.id!=1) );//filtra las sucursales a iterar
         const resume:any = { short:[], on:[], off:[] };
 
         try {
-            for await (const wkp of wkps) {
-                const con:any = await wkpConnection(wkp);
+            for await (const wkp of wkps) {// workpoints iterate
+                const con:any = await wkpConnection(wkp);//test to know if there are connection 
                 console.log(con.resume);
-                resume.short.push(con.resume);
+                resume.short.push(con.resume);// ad short resume as good response
 
-                if(con.state){
+                if(con.state){//check if connection was exit
                     resume.on.push({conection:true,wkp,api:null});
                     const remoteresp = await wkpRequest(wkp,{wkp});//the first wkp is to do test conection, second wkp is for show in console
                     console.log(remoteresp);

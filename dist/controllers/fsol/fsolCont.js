@@ -22,12 +22,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LISTCLIENTS = exports.SYNCCLIENTS = void 0;
 const node_adodb_1 = __importDefault(require("node-adodb"));
 const moment_1 = __importDefault(require("moment"));
+const sequelize_1 = require("sequelize");
 const WrkpointsMD_1 = __importDefault(require("../../models/WrkpointsMD"));
 const HelpresCont_1 = require("../vizapi/HelpresCont");
 const fsol = node_adodb_1.default.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process.env.FSOLDB};Persist Security Info=False;`);
 const SYNCCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
     var e_1, _a;
     console.log("Iniciando sincronizacion de clientes..");
+    const wkpreq = req.body.sucursal;
     let cambiosdetarifa = [];
     const today = (0, moment_1.default)().format('YYYY/MM/DD'); // se obtiene la fecha del dia en curso
     let query = `SELECT * FROM F_CLI WHERE FUMCLI=#${today}#;`; // query por default a ejecutar
@@ -66,6 +68,7 @@ const SYNCCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* (
         try {
             let clrows = yield fsol.query(query); // se ejecuta el query y se obtienen filas
             cllength = clrows.length; //tamaño de las filas
+            console.log(cllength);
             if (cllength) {
                 rows = clrows.map((cl) => {
                     if (cl.TARCLI == 7) {
@@ -75,36 +78,63 @@ const SYNCCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* (
                     resumen.clientes.push(`${(0, moment_1.default)(cl.FUMCLI).format("YYYY/MM/DD")} ==> ${cl.CODCLI} ${cl.NOFCLI}, TAR: ${cl.TARCLI}`);
                     return cl;
                 });
-                if (command == "ver") {
+                if (command == "ver") { // opcion para solo visualizar
                     return resp.json({ "accion": command, inicio: from, fin: to, resumen, cambiosdetarifa });
                 }
-                if (command == "sync") {
-                    const workpoints = yield WrkpointsMD_1.default.findAll();
-                    const wkps = JSON.parse(JSON.stringify(workpoints)).filter((w) => (w.active && w.id > 2));
-                    try {
-                        for (var wkps_1 = __asyncValues(wkps), wkps_1_1; wkps_1_1 = yield wkps_1.next(), !wkps_1_1.done;) {
-                            const wkp = wkps_1_1.value;
-                            const con = yield (0, HelpresCont_1.wkpConnection)(wkp);
-                            if (con.state) {
+                if (command == "sync") { //opcion para sincronizar
+                    if (wkpreq) { // si solo se solicita la actualizacion en una tienda
+                        const wkp = yield WrkpointsMD_1.default.findOne({ where: {
+                                [sequelize_1.Op.or]: [
+                                    { id: wkpreq },
+                                    { alias: wkpreq }
+                                ]
+                            }
+                        });
+                        if (wkp && wkp.active == 1) { // validate workpoint existence and this is active
+                            const con = yield (0, HelpresCont_1.wkpConnection)(wkp); //test to knows there are connection
+                            if (con.state) { //if there are conection
+                                console.log("Conexion exitosa");
                                 const action = yield (0, HelpresCont_1.wkpRequest)(wkp, { rows }, "/fsol/sync/clients", "POST");
                                 const PING = `${wkp.alias} ==> OK!!`;
                                 console.log(PING, action);
-                                resumen.goals.push(`${wkp.alias} ==> PING OK!!`, action);
+                                resp.json({ wkp, con, action }); // send response about request
                             }
                             else {
-                                const PING = `${wkp.alias} ==> REJECT!!`;
-                                resumen.fails.push(PING);
+                                resp.status(502).json({ wkp, con });
+                            } // if there arent response, return a error server
+                        }
+                        else {
+                            resp.status(400).json({ "No hables tus mierdas meriyein": wkp ? `esta sucursal no esta activa (y-_-)y` : `${wkpreq} ni existe (y-_-)y` }); //if there are connection, return error server
+                        }
+                    }
+                    else { // si la actualizacion debe ser completa (en todas las tiendas)
+                        const workpoints = yield WrkpointsMD_1.default.findAll();
+                        const wkps = JSON.parse(JSON.stringify(workpoints)).filter((w) => (w.active && w.id > 2));
+                        try {
+                            for (var wkps_1 = __asyncValues(wkps), wkps_1_1; wkps_1_1 = yield wkps_1.next(), !wkps_1_1.done;) {
+                                const wkp = wkps_1_1.value;
+                                const con = yield (0, HelpresCont_1.wkpConnection)(wkp);
+                                if (con.state) {
+                                    const action = yield (0, HelpresCont_1.wkpRequest)(wkp, { rows }, "/fsol/sync/clients", "POST");
+                                    const PING = `${wkp.alias} ==> OK!!`;
+                                    console.log(PING, action);
+                                    resumen.goals.push(`${wkp.alias} ==> PING OK!!`, action);
+                                }
+                                else {
+                                    const PING = `${wkp.alias} ==> REJECT!!`;
+                                    resumen.fails.push(PING);
+                                }
                             }
                         }
-                    }
-                    catch (e_1_1) { e_1 = { error: e_1_1 }; }
-                    finally {
-                        try {
-                            if (wkps_1_1 && !wkps_1_1.done && (_a = wkps_1.return)) yield _a.call(wkps_1);
+                        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                        finally {
+                            try {
+                                if (wkps_1_1 && !wkps_1_1.done && (_a = wkps_1.return)) yield _a.call(wkps_1);
+                            }
+                            finally { if (e_1) throw e_1.error; }
                         }
-                        finally { if (e_1) throw e_1.error; }
+                        return resp.json({ "accion": command, inicio: from, fin: to, resumen, cambiosdetarifa });
                     }
-                    return resp.json({ "accion": command, inicio: from, fin: to, resumen, cambiosdetarifa });
                 }
             }
             else {
