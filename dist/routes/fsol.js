@@ -3,10 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const fsolCont_1 = require("../controllers/fsol/fsolCont");
 const router = (0, express_1.Router)();
-router.get('/clients', fsolCont_1.LISTCLIENTS);
+// router.get('/clients', LISTCLIENTS);
 // =================================
 // === Trabajo con sincronizador ===
 // =================================
 router.get('/sync/clients', fsolCont_1.SYNCCLIENTS);
+router.get('/sync/familiarizations', fsolCont_1.SYNCPRODSFAMS);
 exports.default = router;
 //# sourceMappingURL=fsol.js.map

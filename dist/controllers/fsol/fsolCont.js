@@ -19,7 +19,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LISTCLIENTS = exports.SYNCCLIENTS = void 0;
+exports.LISTCLIENTS = exports.SYNCPRODSFAMS = exports.SYNCCLIENTS = void 0;
 const node_adodb_1 = __importDefault(require("node-adodb"));
 const moment_1 = __importDefault(require("moment"));
 const sequelize_1 = require("sequelize");
@@ -118,11 +118,11 @@ const SYNCCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* (
                                     const action = yield (0, HelpresCont_1.wkpRequest)(wkp, { rows }, "/fsol/sync/clients", "POST");
                                     const PING = `${wkp.alias} ==> OK!!`;
                                     console.log(PING, action);
-                                    resumen.goals.push(`${wkp.alias} ==> PING OK!!`, action);
+                                    resumen.goals.push({ PING }, action);
                                 }
                                 else {
                                     const PING = `${wkp.alias} ==> REJECT!!`;
-                                    resumen.fails.push(PING);
+                                    resumen.fails.push({ PING });
                                 }
                             }
                         }
@@ -150,6 +150,51 @@ const SYNCCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.SYNCCLIENTS = SYNCCLIENTS;
+const SYNCPRODSFAMS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
+    var e_2, _b;
+    console.time("timeexe");
+    const wkpreq = req.body.sucursal;
+    const today = (0, moment_1.default)().format('YYYY/MM/DD');
+    let resumen = { goals: [], fails: [] };
+    if (wkpreq) {
+        resp.json({ msg: "Sincronizando familarizaciones para...", wkpreq });
+    }
+    else {
+        const workpoints = yield WrkpointsMD_1.default.findAll();
+        const wkps = JSON.parse(JSON.stringify(workpoints)).filter((w) => (w.active && w.id > 2));
+        const query = `SELECT F_EAN.* FROM F_EAN
+                        INNER JOIN F_ART ON F_ART.CODART = F_EAN.ARTEAN
+                        WHERE F_ART.FUMART>=#${today}#;`;
+        const rows = yield fsol.query(query);
+        console.log(rows);
+        try {
+            for (var wkps_2 = __asyncValues(wkps), wkps_2_1; wkps_2_1 = yield wkps_2.next(), !wkps_2_1.done;) {
+                const wkp = wkps_2_1.value;
+                const con = yield (0, HelpresCont_1.wkpConnection)(wkp);
+                if (con.state) {
+                    const action = yield (0, HelpresCont_1.wkpRequest)(wkp, { rows }, "/fsol/sync/familiarizations", "POST");
+                    const PING = `${wkp.alias} ==> OK!!`;
+                    console.log(PING, action);
+                    resumen.goals.push({ PING }, action);
+                }
+                else {
+                    const PING = `${wkp.alias} ==> REJECT!!`;
+                    resumen.fails.push({ PING });
+                }
+            }
+        }
+        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+        finally {
+            try {
+                if (wkps_2_1 && !wkps_2_1.done && (_b = wkps_2.return)) yield _b.call(wkps_2);
+            }
+            finally { if (e_2) throw e_2.error; }
+        }
+        resp.json({ resumen });
+        console.time("timeexe");
+    }
+});
+exports.SYNCPRODSFAMS = SYNCPRODSFAMS;
 const LISTCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
     const fsol = node_adodb_1.default.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process.env.FSOLDB};Persist Security Info=False;`);
     try {

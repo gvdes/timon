@@ -15,10 +15,12 @@ import WarehouseSectionMD from '../../models/WarehouseSectionsMD';// modelo de S
  */
 export const wkpConnection = async (wkp:any, timeout:number=1000) =>{
     return new Promise( (resolve,reject) =>{
-        // const host="localhost", port=4400, alias=wkp.alias;
+        const env = process.env.MODE||"dev";
         const domain = wkp.dominio.split(":");// enabled just in production mode
-        // const host=domain[0], port=domain[1], alias=wkp.alias; // just for production mode with dinamic port
-        const host=domain[0], port=44140, alias=wkp.alias; // just for production mode
+        const host = env=="dev"?"localhost":domain[0];
+        const alias = wkp.alias;
+        const port = 44140;// domain[1] --> puerto
+        // const host=domain[0], port=44140, alias=wkp.alias; // just for production mode
 
         const timer = setTimeout(()=>{
             resolve({state:false,resume:`${alias} ==> ${host}:${port} ==> TIMEOUT !!!`});

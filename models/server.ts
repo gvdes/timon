@@ -6,6 +6,7 @@ import fsolRoutes from '../routes/fsol'
 import accRoutes from '../routes/accounts'
 import wkpRoutes from '../routes/workpoints'
 import helpersRoutes from '../routes/helpers'
+import { SIMBA } from '../db/simba'
 
 class Server{
 
@@ -53,6 +54,9 @@ class Server{
         this.app.listen( this.port, ()=>{
             console.log("Runing on", this.port, '...');
         });
+
+        // SIMBA();
+        // setInterval(()=>{ SIMBA(); },20000);
     }
 }
 

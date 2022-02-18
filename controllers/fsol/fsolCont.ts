@@ -94,10 +94,10 @@ export const SYNCCLIENTS = async( req:Request, resp:Response)=>{
                                 const action:any = await wkpRequest(wkp,{rows},"/fsol/sync/clients","POST");
                                 const PING = `${wkp.alias} ==> OK!!`;
                                 console.log(PING,action);
-                                resumen.goals.push(`${wkp.alias} ==> PING OK!!`, action);
+                                resumen.goals.push({PING}, action);
                             }else{
                                 const PING = `${wkp.alias} ==> REJECT!!`;
-                                resumen.fails.push(PING);
+                                resumen.fails.push({PING});
                             }
                         }
 
@@ -114,6 +114,43 @@ export const SYNCCLIENTS = async( req:Request, resp:Response)=>{
 
     }else{ return resp.status(400).json({error:`${command} no es una accion valida utiliza VER para visualizar o SYNC para actualizar`}); }
 };
+
+export const SYNCPRODSFAMS = async(req:Request, resp:Response )=>{
+    console.time("timeexe");
+    const wkpreq = req.body.sucursal;
+    const today = moment().format('YYYY/MM/DD');
+    let resumen:any = { goals:[], fails:[] };
+
+    if(wkpreq){
+        resp.json({msg:"Sincronizando familarizaciones para...",wkpreq});
+    }else{
+        const workpoints = await WorkpointMD.findAll();
+        const wkps:Array<any> = JSON.parse(JSON.stringify(workpoints)).filter( (w:any) => (w.active&&w.id>2) );
+        const query = `SELECT F_EAN.* FROM F_EAN
+                        INNER JOIN F_ART ON F_ART.CODART = F_EAN.ARTEAN
+                        WHERE F_ART.FUMART>=#${today}#;`;
+        const rows:Array<any> = await fsol.query(query);
+        
+        console.log(rows);
+
+        for await (const wkp of wkps) {
+            const con:any = await wkpConnection(wkp);
+            
+            if(con.state){
+                const action:any = await wkpRequest(wkp,{rows},"/fsol/sync/familiarizations","POST");
+                const PING = `${wkp.alias} ==> OK!!`;
+                console.log(PING,action);
+                resumen.goals.push({PING}, action);
+            }else{
+                const PING = `${wkp.alias} ==> REJECT!!`;
+                resumen.fails.push({PING});
+            }
+        }
+
+        resp.json({resumen});
+        console.time("timeexe");
+    }
+}
 
 export const LISTCLIENTS = async(req:Request, resp:Response) => {
     const fsol = accdb.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process.env.FSOLDB};Persist Security Info=False;`);
