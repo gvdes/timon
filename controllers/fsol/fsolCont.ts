@@ -116,39 +116,77 @@ export const SYNCCLIENTS = async( req:Request, resp:Response)=>{
 };
 
 export const SYNCPRODSFAMS = async(req:Request, resp:Response )=>{
-    console.time("timeexe");
     const wkpreq = req.body.sucursal;
-    const today = moment().format('YYYY/MM/DD');
+    const fecha = req.body.fecha;
+    const accion = req.body.accion;
+    let qday = moment().format('YYYY/MM/DD');
     let resumen:any = { goals:[], fails:[] };
 
-    if(wkpreq){
-        resp.json({msg:"Sincronizando familarizaciones para...",wkpreq});
-    }else{
-        const workpoints = await WorkpointMD.findAll();
-        const wkps:Array<any> = JSON.parse(JSON.stringify(workpoints)).filter( (w:any) => (w.active&&w.id>2) );
-        const query = `SELECT F_EAN.* FROM F_EAN
-                        INNER JOIN F_ART ON F_ART.CODART = F_EAN.ARTEAN
-                        WHERE F_ART.FUMART>=#${today}#;`;
-        const rows:Array<any> = await fsol.query(query);
-        
-        console.log(rows);
-
-        for await (const wkp of wkps) {
-            const con:any = await wkpConnection(wkp);
-            
-            if(con.state){
-                const action:any = await wkpRequest(wkp,{rows},"/fsol/sync/familiarizations","POST");
-                const PING = `${wkp.alias} ==> OK!!`;
-                console.log(PING,action);
-                resumen.goals.push({PING}, action);
-            }else{
-                const PING = `${wkp.alias} ==> REJECT!!`;
-                resumen.fails.push({PING});
-            }
+    if(fecha){// recibi contenido en la variable fecha
+        //la fecha es una fecha valida
+        if(fecha.length==10&&moment(fecha,"YYYY/MM/DD").isValid()){
+            qday=fecha;// nueva fecha a considerar
+        }else{//la fecha no es valida, notificar al cliente
+            return resp.status(400).json({"meriyein":`La fecha: ${fecha}, no es una fecha valida (y-_-)y`});
         }
+    }
 
-        resp.json({resumen});
-        console.time("timeexe");
+    //ejecucion de query
+    const rows:Array<any> = await fsol.query(
+        `SELECT F_EAN.* FROM F_EAN
+        INNER JOIN F_ART ON F_ART.CODART = F_EAN.ARTEAN
+        WHERE F_ART.FUMART>=#${qday}#;`
+    );
+
+    if (accion&&accion=="sync") {//validacion del comando recibido
+        if(rows.length){//hay registros en este periodo de fecha
+            if(wkpreq){//actualizacion individual
+                const wkp:any = await WorkpointMD.findOne({ where:
+                    {
+                        [Op.or]:[
+                            { id:wkpreq },
+                            { alias:wkpreq }
+                        ]
+                    } 
+                });
+                if(wkp&&wkp.active==1){// validate workpoint existence and this is active
+                    const con:any = await wkpConnection(wkp);//test to knows there are connection
+                
+                    if(con.state){//if there are conection
+                        console.log("Conexion exitosa");
+                        const action:any = await wkpRequest(wkp,{rows},"/fsol/sync/familiarizations","POST");
+                        const PING = `${wkp.alias} ==> OK!!`;
+                        console.log(PING,action);
+                        resp.json({wkp,con,action});// send response about request
+                    }else{ return  resp.status(502).json({wkp,con}); }// if there arent response, return a error server
+                }else{
+                    return resp.status(400).json({"meriyein":wkp?`esta sucursal no esta activa (y-_-)y`:`${wkpreq} ni existe (y-_-)y`});//if there are connection, return error server
+                }
+            }else{// actualizacion masiva, a todas las tiendas
+                const workpoints = await WorkpointMD.findAll();
+                const wkps:Array<any> = JSON.parse(JSON.stringify(workpoints)).filter( (w:any) => (w.active&&w.id>2) );
+    
+                for await (const wkp of wkps) {
+                    const con:any = await wkpConnection(wkp);
+                    
+                    if(con.state){
+                        const action:any = await wkpRequest(wkp,{rows},"/fsol/sync/familiarizations","POST");
+                        const PING = `${wkp.alias} ==> OK!!`;
+                        console.log(PING,action);
+                        resumen.goals.push({PING}, action);
+                    }else{
+                        const PING = `${wkp.alias} ==> REJECT!!`;
+                        resumen.fails.push({PING});
+                    }
+                }
+        
+                return resp.json({resumen});
+            }
+        }else{ return resp.json({"meriyein":"Sin familiarizaciones disponibles"}); }
+    }else{//el comando no es sync, se devuelven las filas para visualizarlas
+        return rows.length ?
+            resp.json({fecha,familiarizaciones:rows}):
+            resp.json({"meriyein":"Sin familiarizaciones aqui!!"});
     }
 }
 

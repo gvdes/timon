@@ -152,46 +152,88 @@ const SYNCCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* (
 exports.SYNCCLIENTS = SYNCCLIENTS;
 const SYNCPRODSFAMS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
     var e_2, _b;
-    console.time("timeexe");
     const wkpreq = req.body.sucursal;
-    const today = (0, moment_1.default)().format('YYYY/MM/DD');
+    const fecha = req.body.fecha;
+    const accion = req.body.accion;
+    let qday = (0, moment_1.default)().format('YYYY/MM/DD');
     let resumen = { goals: [], fails: [] };
-    if (wkpreq) {
-        resp.json({ msg: "Sincronizando familarizaciones para...", wkpreq });
+    if (fecha) { // recibi contenido en la variable fecha
+        //la fecha es una fecha valida
+        if (fecha.length == 10 && (0, moment_1.default)(fecha, "YYYY/MM/DD").isValid()) {
+            qday = fecha; // nueva fecha a considerar
+        }
+        else { //la fecha no es valida, notificar al cliente
+            return resp.status(400).json({ "meriyein": `La fecha: ${fecha}, no es una fecha valida (y-_-)y` });
+        }
     }
-    else {
-        const workpoints = yield WrkpointsMD_1.default.findAll();
-        const wkps = JSON.parse(JSON.stringify(workpoints)).filter((w) => (w.active && w.id > 2));
-        const query = `SELECT F_EAN.* FROM F_EAN
-                        INNER JOIN F_ART ON F_ART.CODART = F_EAN.ARTEAN
-                        WHERE F_ART.FUMART>=#${today}#;`;
-        const rows = yield fsol.query(query);
-        console.log(rows);
-        try {
-            for (var wkps_2 = __asyncValues(wkps), wkps_2_1; wkps_2_1 = yield wkps_2.next(), !wkps_2_1.done;) {
-                const wkp = wkps_2_1.value;
-                const con = yield (0, HelpresCont_1.wkpConnection)(wkp);
-                if (con.state) {
-                    const action = yield (0, HelpresCont_1.wkpRequest)(wkp, { rows }, "/fsol/sync/familiarizations", "POST");
-                    const PING = `${wkp.alias} ==> OK!!`;
-                    console.log(PING, action);
-                    resumen.goals.push({ PING }, action);
+    //ejecucion de query
+    const rows = yield fsol.query(`SELECT F_EAN.* FROM F_EAN
+        INNER JOIN F_ART ON F_ART.CODART = F_EAN.ARTEAN
+        WHERE F_ART.FUMART>=#${qday}#;`);
+    if (accion && accion == "sync") { //validacion del comando recibido
+        if (rows.length) { //hay registros en este periodo de fecha
+            if (wkpreq) { //actualizacion individual
+                const wkp = yield WrkpointsMD_1.default.findOne({ where: {
+                        [sequelize_1.Op.or]: [
+                            { id: wkpreq },
+                            { alias: wkpreq }
+                        ]
+                    }
+                });
+                if (wkp && wkp.active == 1) { // validate workpoint existence and this is active
+                    const con = yield (0, HelpresCont_1.wkpConnection)(wkp); //test to knows there are connection
+                    if (con.state) { //if there are conection
+                        console.log("Conexion exitosa");
+                        const action = yield (0, HelpresCont_1.wkpRequest)(wkp, { rows }, "/fsol/sync/familiarizations", "POST");
+                        const PING = `${wkp.alias} ==> OK!!`;
+                        console.log(PING, action);
+                        resp.json({ wkp, con, action }); // send response about request
+                    }
+                    else {
+                        return resp.status(502).json({ wkp, con });
+                    } // if there arent response, return a error server
                 }
                 else {
-                    const PING = `${wkp.alias} ==> REJECT!!`;
-                    resumen.fails.push({ PING });
+                    return resp.status(400).json({ "meriyein": wkp ? `esta sucursal no esta activa (y-_-)y` : `${wkpreq} ni existe (y-_-)y` }); //if there are connection, return error server
                 }
             }
-        }
-        catch (e_2_1) { e_2 = { error: e_2_1 }; }
-        finally {
-            try {
-                if (wkps_2_1 && !wkps_2_1.done && (_b = wkps_2.return)) yield _b.call(wkps_2);
+            else { // actualizacion masiva, a todas las tiendas
+                const workpoints = yield WrkpointsMD_1.default.findAll();
+                const wkps = JSON.parse(JSON.stringify(workpoints)).filter((w) => (w.active && w.id > 2));
+                try {
+                    for (var wkps_2 = __asyncValues(wkps), wkps_2_1; wkps_2_1 = yield wkps_2.next(), !wkps_2_1.done;) {
+                        const wkp = wkps_2_1.value;
+                        const con = yield (0, HelpresCont_1.wkpConnection)(wkp);
+                        if (con.state) {
+                            const action = yield (0, HelpresCont_1.wkpRequest)(wkp, { rows }, "/fsol/sync/familiarizations", "POST");
+                            const PING = `${wkp.alias} ==> OK!!`;
+                            console.log(PING, action);
+                            resumen.goals.push({ PING }, action);
+                        }
+                        else {
+                            const PING = `${wkp.alias} ==> REJECT!!`;
+                            resumen.fails.push({ PING });
+                        }
+                    }
+                }
+                catch (e_2_1) { e_2 = { error: e_2_1 }; }
+                finally {
+                    try {
+                        if (wkps_2_1 && !wkps_2_1.done && (_b = wkps_2.return)) yield _b.call(wkps_2);
+                    }
+                    finally { if (e_2) throw e_2.error; }
+                }
+                return resp.json({ resumen });
             }
-            finally { if (e_2) throw e_2.error; }
         }
-        resp.json({ resumen });
-        console.time("timeexe");
+        else {
+            return resp.json({ "meriyein": "Sin familiarizaciones disponibles" });
+        }
+    }
+    else { //el comando no es sync, se devuelven las filas para visualizarlas
+        return rows.length ?
+            resp.json({ fecha, familiarizaciones: rows }) :
+            resp.json({ "meriyein": "Sin familiarizaciones aqui!!" });
     }
 });
 exports.SYNCPRODSFAMS = SYNCPRODSFAMS;
