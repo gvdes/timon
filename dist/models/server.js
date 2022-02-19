@@ -59,7 +59,7 @@ class Server {
             console.log("Runing on", this.port, '...');
         });
         // SIMBA();
-        // setInterval(()=>{ SIMBA(); },20000);
+        // setInterval(()=>{ SIMBA(); },5000);
     }
 }
 exports.default = Server;

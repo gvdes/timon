@@ -5,7 +5,8 @@ const { db, user, pass, host, port } = JSON.parse((process.env.VADB || ""));
 const vizapi = new sequelize_1.Sequelize(db, user, pass, {
     host: host,
     dialect: 'mysql',
-    port: port
+    port: port,
+    logging: false
 });
 exports.default = vizapi;
 //# sourceMappingURL=vizapi.js.map
