@@ -178,12 +178,12 @@ export const MASSIVELOCATIONS = async(req:Request,resp:Response)=>{
                 const product = JSON.parse(JSON.stringify(prod));// parseo del producto encontrado
                 const paths = row.location.split(",");// obtencion de las ubicaciones a asociar (viene separads por coma desde el excel)
                 
-                if(replace){// eliminar las ubicaciones actuales del producto
-                    const dellocs = await ProductLocationsMD.destroy({
-                        where: { _product: product.id }
-                    });
-                    desuniones.push({product:product.code,desuniones:dellocs});
-                }
+                // if(replace){// eliminar las ubicaciones actuales del producto
+                //     const dellocs = await ProductLocationsMD.destroy({
+                //         where: { _product: product.id }
+                //     });
+                //     desuniones.push({product:product.code,desuniones:dellocs});
+                // }
 
                 for await(const path of paths) {// recorrer unicaciones spliteadas
                     const location:any = await WarehouseSectionMD.findOne({ where:{path,_celler:idwrh} });// se valida laexistencia de la ubicacion

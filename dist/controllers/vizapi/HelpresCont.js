@@ -204,13 +204,13 @@ const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, functi
                 if (prod) {
                     const product = JSON.parse(JSON.stringify(prod)); // parseo del producto encontrado
                     const paths = row.location.split(","); // obtencion de las ubicaciones a asociar (viene separads por coma desde el excel)
-                    if (replace) { // eliminar las ubicaciones actuales del producto
-                        const dellocs = yield ProductLocationsMD_1.default.destroy({
-                            where: { _product: product.id }
-                        });
-                        desuniones.push({ product: product.code, desuniones: dellocs });
-                    }
                     try {
+                        // if(replace){// eliminar las ubicaciones actuales del producto
+                        //     const dellocs = await ProductLocationsMD.destroy({
+                        //         where: { _product: product.id }
+                        //     });
+                        //     desuniones.push({product:product.code,desuniones:dellocs});
+                        // }
                         for (var paths_1 = (e_3 = void 0, __asyncValues(paths)), paths_1_1; paths_1_1 = yield paths_1.next(), !paths_1_1.done;) {
                             const path = paths_1_1.value;
                             const location = yield WarehouseSectionsMD_1.default.findOne({ where: { path, _celler: idwrh } }); // se valida laexistencia de la ubicacion
