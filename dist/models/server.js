@@ -18,7 +18,6 @@ const fsol_1 = __importDefault(require("../routes/fsol"));
 const accounts_1 = __importDefault(require("../routes/accounts"));
 const workpoints_1 = __importDefault(require("../routes/workpoints"));
 const helpers_1 = __importDefault(require("../routes/helpers"));
-const simba_1 = require("../db/simba");
 class Server {
     constructor() {
         this.paths = {
@@ -60,7 +59,7 @@ class Server {
             console.log("Runing on", this.port, '...');
         });
         // SIMBA();
-        setInterval(() => { (0, simba_1.SIMBA)(); }, 240000);
+        // setInterval(()=>{ SIMBA(); }, 240000);
     }
 }
 exports.default = Server;

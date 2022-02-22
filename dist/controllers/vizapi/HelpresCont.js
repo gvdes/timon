@@ -184,40 +184,56 @@ const PINGS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
 exports.PINGS = PINGS;
 const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
     var e_2, _b, e_3, _c, e_4, _d;
+    var _e;
+    console.log("Ubicaciones masivas iniciada...");
     let rows = req.body.rows; // filas que se resiven desde el cliente (filas del excel)
     let idwrh = req.body.idwrh; // id del almacen sobre el que se va a trabaja
+    const replace = (_e = req.body.replace) !== null && _e !== void 0 ? _e : false;
     let productosNoEncontrados = []; // store para almacen de productos encontrados y no encontrados
     let ubicacionesNoEncontradas = []; // almacen de ubicaciones encontradas y no encontradas
+    let filasvacias = []; //almacen para filas que no tienen 
     let porunir = []; // almacen para posibles uniones
     let uniones = { exitosas: [], erroneas: [] }; // uniones completadas y uniones que fracasaron
+    let desuniones = []; //almacena las desuniones realizadas
     let yaestaban = []; // uniones que ya existian
     try {
         for (var rows_1 = __asyncValues(rows), rows_1_1; rows_1_1 = yield rows_1.next(), !rows_1_1.done;) {
             const row = rows_1_1.value;
-            const prod = yield Product_1.default.findOne({ where: { code: row.code } }); // busqueda del producto
-            if (prod) {
-                const product = JSON.parse(JSON.stringify(prod)); // parseo del producto encontrado
-                const paths = row.location.split(","); // obtencion de las ubicaciones a asociar (viene separads por coma desde el excel)
-                try {
-                    for (var paths_1 = (e_3 = void 0, __asyncValues(paths)), paths_1_1; paths_1_1 = yield paths_1.next(), !paths_1_1.done;) {
-                        const path = paths_1_1.value;
-                        const location = yield WarehouseSectionsMD_1.default.findOne({ where: { path, _celler: idwrh } }); // se valida laexistencia de la ubicacion
-                        location ?
-                            porunir.push({ code: product.code, _product: product.id, _location: location.id, path }) : // producto y ubicacion que si pueden asociadas
-                            ubicacionesNoEncontradas.push(path); // se agrega al store de ubicaciones no entradas
+            if (row.code && row.location) {
+                const prod = yield Product_1.default.findOne({ where: { code: row.code } }); // busqueda del producto
+                if (prod) {
+                    const product = JSON.parse(JSON.stringify(prod)); // parseo del producto encontrado
+                    const paths = row.location.split(","); // obtencion de las ubicaciones a asociar (viene separads por coma desde el excel)
+                    if (replace) { // eliminar las ubicaciones actuales del producto
+                        const dellocs = yield ProductLocationsMD_1.default.destroy({
+                            where: { _product: product.id }
+                        });
+                        desuniones.push({ product: product.code, desuniones: dellocs });
                     }
-                }
-                catch (e_3_1) { e_3 = { error: e_3_1 }; }
-                finally {
                     try {
-                        if (paths_1_1 && !paths_1_1.done && (_c = paths_1.return)) yield _c.call(paths_1);
+                        for (var paths_1 = (e_3 = void 0, __asyncValues(paths)), paths_1_1; paths_1_1 = yield paths_1.next(), !paths_1_1.done;) {
+                            const path = paths_1_1.value;
+                            const location = yield WarehouseSectionsMD_1.default.findOne({ where: { path, _celler: idwrh } }); // se valida laexistencia de la ubicacion
+                            location ?
+                                porunir.push({ code: product.code, _product: product.id, _location: location.id, path }) : // producto y ubicacion que si pueden asociadas
+                                ubicacionesNoEncontradas.push(path); // se agrega al store de ubicaciones no entradas
+                        }
                     }
-                    finally { if (e_3) throw e_3.error; }
+                    catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                    finally {
+                        try {
+                            if (paths_1_1 && !paths_1_1.done && (_c = paths_1.return)) yield _c.call(paths_1);
+                        }
+                        finally { if (e_3) throw e_3.error; }
+                    }
                 }
+                else {
+                    productosNoEncontrados.push(row.code);
+                } // se agrega al store de productos no encontrados
             }
             else {
-                productosNoEncontrados.push(row.code);
-            } // se agrega al store de productos no encontrados
+                filasvacias.push(row);
+            }
         }
     }
     catch (e_2_1) { e_2 = { error: e_2_1 }; }
@@ -247,7 +263,7 @@ const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, functi
         }
         finally { if (e_4) throw e_4.error; }
     }
-    resp.json({ filasprocesadas: rows.length, productosNoEncontrados, ubicacionesNoEncontradas, porunir, uniones, yaestaban });
+    resp.json({ filasprocesadas: rows.length, filasvacias, productosNoEncontrados, ubicacionesNoEncontradas, porunir, uniones, yaestaban, desuniones });
 });
 exports.MASSIVELOCATIONS = MASSIVELOCATIONS;
 //# sourceMappingURL=HelpresCont.js.map

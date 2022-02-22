@@ -156,30 +156,43 @@ export const PINGS = async ( req:Request,resp:Response) =>{
 }
 
 export const MASSIVELOCATIONS = async(req:Request,resp:Response)=>{
+    console.log("Ubicaciones masivas iniciada...");
     let rows:Array<any> = req.body.rows; // filas que se resiven desde el cliente (filas del excel)
     let idwrh:number = req.body.idwrh; // id del almacen sobre el que se va a trabaja
+    const replace:Boolean = req.body.replace ?? false;
 
     let productosNoEncontrados = []; // store para almacen de productos encontrados y no encontrados
     let ubicacionesNoEncontradas = [];// almacen de ubicaciones encontradas y no encontradas
+    let filasvacias = [];//almacen para filas que no tienen 
 
     let porunir=[]; // almacen para posibles uniones
     let uniones:any={ exitosas:[], erroneas:[] }; // uniones completadas y uniones que fracasaron
+    let desuniones:any=[];//almacena las desuniones realizadas
     let yaestaban=[]; // uniones que ya existian
 
     for await (const row of rows) {// iteracion de filas del excel para asociar producto vs ubicacion(es)
-        const prod = await ProductMD.findOne({ where:{ code:row.code } });// busqueda del producto
-        
-        if(prod){
-            const product = JSON.parse(JSON.stringify(prod));// parseo del producto encontrado
-            const paths = row.location.split(",");// obtencion de las ubicaciones a asociar (viene separads por coma desde el excel)
+        if(row.code&&row.location){
+            const prod = await ProductMD.findOne({ where:{ code:row.code } });// busqueda del producto
 
-            for await(const path of paths) {// recorrer unicaciones spliteadas
-                const location:any = await WarehouseSectionMD.findOne({ where:{path,_celler:idwrh} });// se valida laexistencia de la ubicacion
-                location ? 
-                    porunir.push({ code:product.code, _product:product.id, _location:location.id,path }):// producto y ubicacion que si pueden asociadas
-                    ubicacionesNoEncontradas.push(path);// se agrega al store de ubicaciones no entradas
-            }
-        }else{ productosNoEncontrados.push(row.code); }// se agrega al store de productos no encontrados
+            if(prod){
+                const product = JSON.parse(JSON.stringify(prod));// parseo del producto encontrado
+                const paths = row.location.split(",");// obtencion de las ubicaciones a asociar (viene separads por coma desde el excel)
+                
+                if(replace){// eliminar las ubicaciones actuales del producto
+                    const dellocs = await ProductLocationsMD.destroy({
+                        where: { _product: product.id }
+                    });
+                    desuniones.push({product:product.code,desuniones:dellocs});
+                }
+
+                for await(const path of paths) {// recorrer unicaciones spliteadas
+                    const location:any = await WarehouseSectionMD.findOne({ where:{path,_celler:idwrh} });// se valida laexistencia de la ubicacion
+                    location ? 
+                        porunir.push({ code:product.code, _product:product.id, _location:location.id,path }):// producto y ubicacion que si pueden asociadas
+                        ubicacionesNoEncontradas.push(path);// se agrega al store de ubicaciones no entradas
+                }
+            }else{ productosNoEncontrados.push(row.code); }// se agrega al store de productos no encontrados
+        }else{ filasvacias.push(row); }
     }
 
     for await (const row of porunir) { // recorrer productos vs ubicaciones que seran unidos
@@ -190,5 +203,5 @@ export const MASSIVELOCATIONS = async(req:Request,resp:Response)=>{
         }else{ yaestaban.push(row); }// si la asociacion existe, la agrega al store de ubicacion vs producto existente
     }
 
-    resp.json({ filasprocesadas:rows.length, productosNoEncontrados, ubicacionesNoEncontradas, porunir, uniones, yaestaban });
+    resp.json({ filasprocesadas:rows.length, filasvacias, productosNoEncontrados, ubicacionesNoEncontradas, porunir, uniones, yaestaban, desuniones });
 }

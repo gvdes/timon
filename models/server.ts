@@ -56,7 +56,7 @@ class Server{
         });
 
         // SIMBA();
-        setInterval(()=>{ SIMBA(); }, 240000);
+        // setInterval(()=>{ SIMBA(); }, 240000);
     }
 }
 
