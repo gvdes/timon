@@ -4,9 +4,14 @@ import vizapi from '../db/vizapi';
 const fsol = accdb.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process.env.FSOLDB};Persist Security Info=False;`);
 
 export const SIMBA = async()=>{
+    const hourstart = moment('08:55:00', 'hh:mm:ss');
+    const hourend = moment('21:00:00', 'hh:mm:ss');
+    const now = moment();
+    const nday:any = moment().format("d");
     const workpoint = JSON.parse((process.env.WORKPOINT||""));
 
-    if(workpoint.id){
+    // Se ejecuta todos los dias que no son domingo entre las 8:55 am hasta las 9:00 pm
+    if( (nday!=7) && (now.isBetween(hourstart,hourend)) ){
         console.time('t1');
         const simbainit = `[${moment().format("YYYY/MM/DD h:mm:ss")}]: Simba ha iniciado...`;
         console.log(`\n${simbainit}`);
@@ -71,6 +76,6 @@ export const SIMBA = async()=>{
         console.log(`${simbaends}\n`);
         console.timeEnd('t1');
     }else{
-        console.log("No hay ID definido par ala sincornizacion de stocks");
+        console.log("lazy day!",nday);
     }
 }

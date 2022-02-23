@@ -26,8 +26,13 @@ const vizapi_1 = __importDefault(require("../db/vizapi"));
 const fsol = node_adodb_1.default.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process.env.FSOLDB};Persist Security Info=False;`);
 const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
     var e_1, _a, e_2, _b, e_3, _c;
+    const hourstart = (0, moment_1.default)('08:55:00', 'hh:mm:ss');
+    const hourend = (0, moment_1.default)('21:00:00', 'hh:mm:ss');
+    const now = (0, moment_1.default)();
+    const nday = (0, moment_1.default)().format("d");
     const workpoint = JSON.parse((process.env.WORKPOINT || ""));
-    if (workpoint.id) {
+    // Se ejecuta todos los dias que no son domingo entre las 8:55 am hasta las 9:00 pm
+    if ((nday != 7) && (now.isBetween(hourstart, hourend))) {
         console.time('t1');
         const simbainit = `[${(0, moment_1.default)().format("YYYY/MM/DD h:mm:ss")}]: Simba ha iniciado...`;
         console.log(`\n${simbainit}`);
@@ -120,7 +125,7 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
         console.timeEnd('t1');
     }
     else {
-        console.log("No hay ID definido par ala sincornizacion de stocks");
+        console.log("lazy day!", nday);
     }
 });
 exports.SIMBA = SIMBA;
