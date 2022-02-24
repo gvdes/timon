@@ -212,7 +212,7 @@ const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, functi
                             INNER JOIN celler C ON C.id=CS._celler
                             INNER JOIN products P ON P.id=PL._product
                             INNER JOIN workpoints W ON W.id=C._workpoint
-                        WHERE W.id=${idwrh} AND P.code="${product.id}";
+                        WHERE W.id=${idwrh} AND P.code="${product.code}";
                     `);
                         console.log(results);
                         if (results.affectedRows > 0) {
