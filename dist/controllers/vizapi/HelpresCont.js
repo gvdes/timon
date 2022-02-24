@@ -23,6 +23,7 @@ exports.MASSIVELOCATIONS = exports.PINGS = exports.wkpRequest = exports.wkpConne
 const net_1 = __importDefault(require("net"));
 const http_1 = __importDefault(require("http"));
 const sequelize_1 = require("sequelize");
+const vizapi_1 = __importDefault(require("../../db/vizapi"));
 const Product_1 = __importDefault(require("../../models/Product")); // modelo de Products
 const WrkpointsMD_1 = __importDefault(require("../../models/WrkpointsMD")); // modelo de WorkPoints
 const ProductLocationsMD_1 = __importDefault(require("../../models/ProductLocationsMD")); // modelo de Producto vs ubicacion
@@ -187,7 +188,7 @@ const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, functi
     var _e;
     console.log("Ubicaciones masivas iniciada...");
     let rows = req.body.rows; // filas que se resiven desde el cliente (filas del excel)
-    let idwrh = req.body.idwrh; // id del almacen sobre el que se va a trabaja
+    let idwrh = req.body.idwrh; // id del almacen sobre el que se va a trabajar
     const replace = (_e = req.body.replace) !== null && _e !== void 0 ? _e : false;
     let productosNoEncontrados = []; // store para almacen de productos encontrados y no encontrados
     let ubicacionesNoEncontradas = []; // almacen de ubicaciones encontradas y no encontradas
@@ -204,13 +205,21 @@ const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, functi
                 if (prod) {
                     const product = JSON.parse(JSON.stringify(prod)); // parseo del producto encontrado
                     const paths = row.location.split(","); // obtencion de las ubicaciones a asociar (viene separads por coma desde el excel)
+                    if (replace) { // eliminar las ubicaciones actuales del producto en cualquiera de los almacenes de la sucursal recibida
+                        const [results] = yield vizapi_1.default.query(`
+                        DELETE PL FROM product_location PL
+                            INNER JOIN celler_section CS ON CS.id=PL._location
+                            INNER JOIN celler C ON C.id=CS._celler
+                            INNER JOIN products P ON P.id=PL._product
+                            INNER JOIN workpoints W ON W.id=C._workpoint
+                        WHERE W.id=${idwrh} AND P.code="${product.id}";
+                    `);
+                        console.log(results);
+                        if (results.affectedRows > 0) {
+                            desuniones.push({ product: product.code, locs: results.affectedRows });
+                        }
+                    }
                     try {
-                        // if(replace){// eliminar las ubicaciones actuales del producto
-                        //     const dellocs = await ProductLocationsMD.destroy({
-                        //         where: { _product: product.id }
-                        //     });
-                        //     desuniones.push({product:product.code,desuniones:dellocs});
-                        // }
                         for (var paths_1 = (e_3 = void 0, __asyncValues(paths)), paths_1_1; paths_1_1 = yield paths_1.next(), !paths_1_1.done;) {
                             const path = paths_1_1.value;
                             const location = yield WarehouseSectionsMD_1.default.findOne({ where: { path, _celler: idwrh } }); // se valida laexistencia de la ubicacion
@@ -247,7 +256,7 @@ const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, functi
         for (var porunir_1 = __asyncValues(porunir), porunir_1_1; porunir_1_1 = yield porunir_1.next(), !porunir_1_1.done;) {
             const row = porunir_1_1.value;
             const exAsoc = yield ProductLocationsMD_1.default.findOne({ where: { _product: row._product, _location: row._location } }); // validacion de existencia de asociacion
-            if (!exAsoc) { // la asosiacion no existe
+            if (!exAsoc) { // la asosiacion no existe 
                 const Asoc = yield ProductLocationsMD_1.default.create({ _product: row._product, _location: row._location }); // inserta/crea la asociacion de producto vs ubicacion
                 Asoc ? uniones.exitosas.push(row) : uniones.erroneas.push(row); // valida la creacion erronea o correcta del producto vs ubicacion 
             }
@@ -264,6 +273,7 @@ const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, functi
         finally { if (e_4) throw e_4.error; }
     }
     resp.json({ filasprocesadas: rows.length, filasvacias, productosNoEncontrados, ubicacionesNoEncontradas, porunir, uniones, yaestaban, desuniones });
+    console.log("Ubicaciones masivas finalizada...");
 });
 exports.MASSIVELOCATIONS = MASSIVELOCATIONS;
 //# sourceMappingURL=HelpresCont.js.map
