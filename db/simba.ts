@@ -12,49 +12,47 @@ export const SIMBA = async()=>{
 
     // Se ejecuta todos los dias que no son domingo entre las 8:55 am hasta las 9:00 pm
     if( (nday!=7) && (now.isBetween(hourstart,hourend)) ){
-        console.time('t1');
         const simbainit = `[${moment().format("YYYY/MM/DD h:mm:ss")}]: Simba ha iniciado...`;
         console.log(`\n${simbainit}`);
         let WRHGEN:any=[], WRHDES:any=[] ;
 
-        let rset:any = { GEN:[], DES:[], PAN:[] };
+        let rset:any = { SAN:[], PAN:[] };
 
-        const CEDISSANrows:Array<any> = await fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="DES" OR ALMSTO="GEN" ORDER BY ARTSTO;');
+        console.time('SELECTS');
+        const CEDISSANrows:Array<any> = await fsol.query(
+            `SELECT F_STO.ARTSTO AS CODIGO,
+            GEN.ACTSTO AS GENSTOCK,
+            DES.ACTSTO AS DESSTOCK,
+            (GEN.ACTSTO + DES.ACTSTO) AS STOCK 
+            FROM (
+                (F_STO INNER JOIN F_STO AS GEN ON GEN.ARTSTO = F_STO.ARTSTO)
+                INNER JOIN F_STO AS DES  ON DES.ARTSTO = F_STO.ARTSTO
+            )
+            WHERE GEN.ALMSTO="GEN" AND DES.ALMSTO="DES" GROUP BY F_STO.ARTSTO , GEN.ACTSTO, DES.ACTSTO;`
+        );
         const CEDISPANrows:Array<any> = await fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="PAN" ORDER BY ARTSTO;');
-
+        console.timeEnd('SELECTS');
+        
+        console.time('UPDATEDS');
         if(CEDISSANrows.length){
-            console.log("Sincronizando CEDIS SANPABLO...");
-            WRHGEN = CEDISSANrows.filter( r => r.ALMSTO=="GEN");
-            WRHDES = CEDISSANrows.filter( r => r.ALMSTO=="DES");
-            
-            console.log("ALMACEN GENERAL...");
-            for await (const row of WRHGEN) {
+            console.log("Sincronizando CEDISSAP (GENERAL y DESCOMPUESTO)");
+            for await ( const row of CEDISSANrows ){
                 const [results]:any = await vizapi.query(`
                     UPDATE product_stock STO
                         INNER JOIN products P ON P.id = STO._product
                         INNER JOIN workpoints W ON W.id = STO._workpoint
-                    SET gen=${row.ACTSTO}
-                    WHERE P.code="${row.ARTSTO}" AND W.id="${workpoint.id}";
+                    SET
+                        STO.stock="${row.STOCK}",
+                        STO.gen="${row.GENSTOCK}",
+                        STO.des="${row.DESSTOCK}"
+                    WHERE P.code="${row.CODIGO}" AND W.id=1;
                 `);
-                if(results.changedRows){ rset.GEN.push({code:row.ARTSTO}); }
-            }
-
-            console.log("ALMACEN DESCOMPUESTO...");
-            for await (const row of WRHDES) {
-                const [results]:any = await vizapi.query(`
-                    UPDATE product_stock STO
-                        INNER JOIN products P ON P.id = STO._product
-                        INNER JOIN workpoints W ON W.id = STO._workpoint
-                    SET des=${row.ACTSTO}
-                    WHERE P.code="${row.ARTSTO}" AND W.id="${workpoint.id}";
-                `);
-                if(results.changedRows){ rset.DES.push({code:row.ARTSTO}); }
-            }
+                if(results.changedRows){ rset.SAN.push({code:row.CODIGO}); }
+            };
         }
 
         if(CEDISPANrows.length){
             console.log("Sincronizando CEDIS PANTACO...");
-            
             for await (const row of CEDISPANrows) {
                 const [results]:any = await vizapi.query(`
                     UPDATE product_stock STO
@@ -68,13 +66,12 @@ export const SIMBA = async()=>{
         }
 
         console.log("FILAS TOTALES:",(CEDISSANrows.length+CEDISPANrows.length));
-        console.log("ALMACEN GENERAL:",WRHGEN.length," UPDATEDS:",rset.GEN.length);
-        console.log("ALMACEN DESCOMPUESTOS:",WRHDES.length," UPDATEDS:",rset.DES.length);
-        console.log("ALMACEN PANTACO:",CEDISPANrows.length," UPDATEDS:",rset.PAN.length);
+        console.log("CEDISSAN:",CEDISSANrows.length," UPDATEDS:",rset.SAN.length);
+        console.log("CEDISPAN:",CEDISPANrows.length," UPDATEDS:",rset.PAN.length);
 
         const simbaends = `[${moment().format("YYYY/MM/DD h:mm:ss")}]: Simba ha finalizado...`;
         console.log(`${simbaends}\n`);
-        console.timeEnd('t1');
+        console.timeEnd('UPDATEDS');
     }else{
         console.log("lazy day!",nday);
     }

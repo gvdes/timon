@@ -214,7 +214,6 @@ const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, functi
                             INNER JOIN workpoints W ON W.id=C._workpoint
                         WHERE W.id=${idwrh} AND P.code="${product.code}";
                     `);
-                        console.log(results);
                         if (results.affectedRows > 0) {
                             desuniones.push({ product: product.code, locs: results.affectedRows });
                         }

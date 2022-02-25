@@ -25,7 +25,7 @@ const moment_1 = __importDefault(require("moment"));
 const vizapi_1 = __importDefault(require("../db/vizapi"));
 const fsol = node_adodb_1.default.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process.env.FSOLDB};Persist Security Info=False;`);
 const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
-    var e_1, _a, e_2, _b, e_3, _c;
+    var e_1, _a, e_2, _b;
     const hourstart = (0, moment_1.default)('08:55:00', 'hh:mm:ss');
     const hourend = (0, moment_1.default)('21:00:00', 'hh:mm:ss');
     const now = (0, moment_1.default)();
@@ -33,63 +33,51 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
     const workpoint = JSON.parse((process.env.WORKPOINT || ""));
     // Se ejecuta todos los dias que no son domingo entre las 8:55 am hasta las 9:00 pm
     if ((nday != 7) && (now.isBetween(hourstart, hourend))) {
-        console.time('t1');
         const simbainit = `[${(0, moment_1.default)().format("YYYY/MM/DD h:mm:ss")}]: Simba ha iniciado...`;
         console.log(`\n${simbainit}`);
         let WRHGEN = [], WRHDES = [];
-        let rset = { GEN: [], DES: [], PAN: [] };
-        const CEDISSANrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="DES" OR ALMSTO="GEN" ORDER BY ARTSTO;');
+        let rset = { SAN: [], PAN: [] };
+        console.time('SELECTS');
+        const CEDISSANrows = yield fsol.query(`SELECT F_STO.ARTSTO AS CODIGO,
+            GEN.ACTSTO AS GENSTOCK,
+            DES.ACTSTO AS DESSTOCK,
+            (GEN.ACTSTO + DES.ACTSTO) AS STOCK 
+            FROM (
+                (F_STO INNER JOIN F_STO AS GEN ON GEN.ARTSTO = F_STO.ARTSTO)
+                INNER JOIN F_STO AS DES  ON DES.ARTSTO = F_STO.ARTSTO
+            )
+            WHERE GEN.ALMSTO="GEN" AND DES.ALMSTO="DES" GROUP BY F_STO.ARTSTO , GEN.ACTSTO, DES.ACTSTO;`);
         const CEDISPANrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="PAN" ORDER BY ARTSTO;');
+        console.timeEnd('SELECTS');
+        console.time('UPDATEDS');
         if (CEDISSANrows.length) {
-            console.log("Sincronizando CEDIS SANPABLO...");
-            WRHGEN = CEDISSANrows.filter(r => r.ALMSTO == "GEN");
-            WRHDES = CEDISSANrows.filter(r => r.ALMSTO == "DES");
-            console.log("ALMACEN GENERAL...");
+            console.log("Sincronizando CEDISSAP (GENERAL y DESCOMPUESTO)");
             try {
-                for (var WRHGEN_1 = __asyncValues(WRHGEN), WRHGEN_1_1; WRHGEN_1_1 = yield WRHGEN_1.next(), !WRHGEN_1_1.done;) {
-                    const row = WRHGEN_1_1.value;
+                for (var CEDISSANrows_1 = __asyncValues(CEDISSANrows), CEDISSANrows_1_1; CEDISSANrows_1_1 = yield CEDISSANrows_1.next(), !CEDISSANrows_1_1.done;) {
+                    const row = CEDISSANrows_1_1.value;
                     const [results] = yield vizapi_1.default.query(`
                     UPDATE product_stock STO
                         INNER JOIN products P ON P.id = STO._product
                         INNER JOIN workpoints W ON W.id = STO._workpoint
-                    SET gen=${row.ACTSTO}
-                    WHERE P.code="${row.ARTSTO}" AND W.id="${workpoint.id}";
+                    SET
+                        STO.stock="${row.STOCK}",
+                        STO.gen="${row.GENSTOCK}",
+                        STO.des="${row.DESSTOCK}"
+                    WHERE P.code="${row.CODIGO}" AND W.id=1;
                 `);
                     if (results.changedRows) {
-                        rset.GEN.push({ code: row.ARTSTO });
+                        rset.SAN.push({ code: row.CODIGO });
                     }
                 }
             }
             catch (e_1_1) { e_1 = { error: e_1_1 }; }
             finally {
                 try {
-                    if (WRHGEN_1_1 && !WRHGEN_1_1.done && (_a = WRHGEN_1.return)) yield _a.call(WRHGEN_1);
+                    if (CEDISSANrows_1_1 && !CEDISSANrows_1_1.done && (_a = CEDISSANrows_1.return)) yield _a.call(CEDISSANrows_1);
                 }
                 finally { if (e_1) throw e_1.error; }
             }
-            console.log("ALMACEN DESCOMPUESTO...");
-            try {
-                for (var WRHDES_1 = __asyncValues(WRHDES), WRHDES_1_1; WRHDES_1_1 = yield WRHDES_1.next(), !WRHDES_1_1.done;) {
-                    const row = WRHDES_1_1.value;
-                    const [results] = yield vizapi_1.default.query(`
-                    UPDATE product_stock STO
-                        INNER JOIN products P ON P.id = STO._product
-                        INNER JOIN workpoints W ON W.id = STO._workpoint
-                    SET des=${row.ACTSTO}
-                    WHERE P.code="${row.ARTSTO}" AND W.id="${workpoint.id}";
-                `);
-                    if (results.changedRows) {
-                        rset.DES.push({ code: row.ARTSTO });
-                    }
-                }
-            }
-            catch (e_2_1) { e_2 = { error: e_2_1 }; }
-            finally {
-                try {
-                    if (WRHDES_1_1 && !WRHDES_1_1.done && (_b = WRHDES_1.return)) yield _b.call(WRHDES_1);
-                }
-                finally { if (e_2) throw e_2.error; }
-            }
+            ;
         }
         if (CEDISPANrows.length) {
             console.log("Sincronizando CEDIS PANTACO...");
@@ -108,21 +96,20 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                     }
                 }
             }
-            catch (e_3_1) { e_3 = { error: e_3_1 }; }
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
             finally {
                 try {
-                    if (CEDISPANrows_1_1 && !CEDISPANrows_1_1.done && (_c = CEDISPANrows_1.return)) yield _c.call(CEDISPANrows_1);
+                    if (CEDISPANrows_1_1 && !CEDISPANrows_1_1.done && (_b = CEDISPANrows_1.return)) yield _b.call(CEDISPANrows_1);
                 }
-                finally { if (e_3) throw e_3.error; }
+                finally { if (e_2) throw e_2.error; }
             }
         }
         console.log("FILAS TOTALES:", (CEDISSANrows.length + CEDISPANrows.length));
-        console.log("ALMACEN GENERAL:", WRHGEN.length, " UPDATEDS:", rset.GEN.length);
-        console.log("ALMACEN DESCOMPUESTOS:", WRHDES.length, " UPDATEDS:", rset.DES.length);
-        console.log("ALMACEN PANTACO:", CEDISPANrows.length, " UPDATEDS:", rset.PAN.length);
+        console.log("CEDISSAN:", CEDISSANrows.length, " UPDATEDS:", rset.SAN.length);
+        console.log("CEDISPAN:", CEDISPANrows.length, " UPDATEDS:", rset.PAN.length);
         const simbaends = `[${(0, moment_1.default)().format("YYYY/MM/DD h:mm:ss")}]: Simba ha finalizado...`;
         console.log(`${simbaends}\n`);
-        console.timeEnd('t1');
+        console.timeEnd('UPDATEDS');
     }
     else {
         console.log("lazy day!", nday);
