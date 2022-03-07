@@ -1,7 +1,8 @@
-import { Request, response, Response } from 'express'
+import { query, Request, response, Response } from 'express'
 import accdb from 'node-adodb'
 import moment from 'moment';
 import { Op } from "sequelize";
+import vizapi from '../../db/vizapi';
 
 import WorkpointMD from '../../models/WrkpointsMD';
 import { wkpRequest, wkpConnection } from '../vizapi/HelpresCont';
@@ -199,4 +200,69 @@ export const LISTCLIENTS = async(req:Request, resp:Response) => {
     } catch (error) {
         resp.status(500).json(error);
     }
+}
+
+export const SYNCPRODUCTSPRICES = async(req:Request, resp:Response)=>{
+    console.log("\n\nSincronizando precios...");
+
+    //validacion de parametros a recibir
+    const fecha = req.body.fecha;
+    const accion = req.body.accion;
+    let command = "productosyprecios";
+    let period = "";
+    let msg = "";
+
+    if(fecha){
+        if(fecha=="hoy"){
+            period = moment().format('YYYY/MM/DD');
+        }else if(moment(fecha,"YYYY/MM/DD").isValid()){
+            period = fecha;
+        }else{
+            return resp.status(400).json({msg:"No es una fecha valida!"});
+        }
+    }else{ period = moment().format('YYYY/MM/DD'); }
+
+    if( accion && accion=="precios" ){ command=accion; }
+
+    console.time("SELECTS");
+    const rsetprods:Array<any> = await fsol.query(`SELECT * FROM F_ART WHERE FUMART >= #${period}#`);
+    const rsetprices:Array<any> = await fsol.query(`
+                                            SELECT
+                                            F_LTA.*
+                                            FROM F_LTA 
+                                            INNER JOIN F_ART ON F_ART.CODART = F_LTA.ARTLTA
+                                            WHERE F_ART.FUMART >= #${period}# AND F_LTA.TARLTA NOT IN (7);`);
+    console.timeEnd("SELECTS");
+
+    if(rsetprods.length||rsetprices.length){
+        //Primero registrar los cambios en MYSQL
+
+        // Crear un api para que se haga la solicitud hacia tiendas de una actualizacion de precios, y en cada tienda
+        // se haga esta actualizacion
+
+
+        // const [workpoints]:Array<any> = await vizapi.query('SELECT * FROM workpoints WHERE active=1 AND id>2;');
+
+        // for await (const wkp of workpoints) {
+        //     // console.log(wkp.id, wkp.name);
+        //     const con:any = await wkpConnection(wkp);//test to knows there are connection
+        //     if(con.state){
+        //         console.log(wkp.name, "==> DONE!!");
+        //         const action:any = await wkpRequest(wkp,{rsetprods,rsetprices},"/fsol/sync/productsprices","POST");
+        //         console.log(action);
+        //     }else{
+        //         console.log(wkp.name, "==> REFUSED!!");
+        //     }
+        // }
+    }else{ return resp.json({msg:"Nada por actualizar o crear"}); }
+
+    //sincronizar en MYSQL
+
+    return resp.json({
+        msg:"Vamo a actualizar precios!!",
+        period,
+        command,
+        products:rsetprods.length,
+        precios:rsetprices.length,
+    });
 }

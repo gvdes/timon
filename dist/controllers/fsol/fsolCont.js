@@ -19,7 +19,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LISTCLIENTS = exports.SYNCPRODSFAMS = exports.SYNCCLIENTS = void 0;
+exports.SYNCPRODUCTSPRICES = exports.LISTCLIENTS = exports.SYNCPRODSFAMS = exports.SYNCCLIENTS = void 0;
 const node_adodb_1 = __importDefault(require("node-adodb"));
 const moment_1 = __importDefault(require("moment"));
 const sequelize_1 = require("sequelize");
@@ -248,4 +248,68 @@ const LISTCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.LISTCLIENTS = LISTCLIENTS;
+const SYNCPRODUCTSPRICES = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("\n\nSincronizando precios...");
+    //validacion de parametros a recibir
+    const fecha = req.body.fecha;
+    const accion = req.body.accion;
+    let command = "productosyprecios";
+    let period = "";
+    let msg = "";
+    if (fecha) {
+        if (fecha == "hoy") {
+            period = (0, moment_1.default)().format('YYYY/MM/DD');
+        }
+        else if ((0, moment_1.default)(fecha, "YYYY/MM/DD").isValid()) {
+            period = fecha;
+        }
+        else {
+            return resp.status(400).json({ msg: "No es una fecha valida!" });
+        }
+    }
+    else {
+        period = (0, moment_1.default)().format('YYYY/MM/DD');
+    }
+    if (accion && accion == "precios") {
+        command = accion;
+    }
+    console.time("SELECTS");
+    const rsetprods = yield fsol.query(`SELECT * FROM F_ART WHERE FUMART >= #${period}#`);
+    const rsetprices = yield fsol.query(`
+                                            SELECT
+                                            F_LTA.*
+                                            FROM F_LTA 
+                                            INNER JOIN F_ART ON F_ART.CODART = F_LTA.ARTLTA
+                                            WHERE F_ART.FUMART >= #${period}# AND F_LTA.TARLTA NOT IN (7);`);
+    console.timeEnd("SELECTS");
+    if (rsetprods.length || rsetprices.length) {
+        //Primero registrar los cambios en MYSQL
+        // Crear un api para que se haga la solicitud hacia tiendas de una actualizacion de precios, y en cada tienda
+        // se haga esta actualizacion
+        // const [workpoints]:Array<any> = await vizapi.query('SELECT * FROM workpoints WHERE active=1 AND id>2;');
+        // for await (const wkp of workpoints) {
+        //     // console.log(wkp.id, wkp.name);
+        //     const con:any = await wkpConnection(wkp);//test to knows there are connection
+        //     if(con.state){
+        //         console.log(wkp.name, "==> DONE!!");
+        //         const action:any = await wkpRequest(wkp,{rsetprods,rsetprices},"/fsol/sync/productsprices","POST");
+        //         console.log(action);
+        //     }else{
+        //         console.log(wkp.name, "==> REFUSED!!");
+        //     }
+        // }
+    }
+    else {
+        return resp.json({ msg: "Nada por actualizar o crear" });
+    }
+    //sincronizar en MYSQL
+    return resp.json({
+        msg: "Vamo a actualizar precios!!",
+        period,
+        command,
+        products: rsetprods.length,
+        precios: rsetprices.length,
+    });
+});
+exports.SYNCPRODUCTSPRICES = SYNCPRODUCTSPRICES;
 //# sourceMappingURL=fsolCont.js.map
