@@ -46,7 +46,8 @@ class Server {
         });
     }
     middlewares() {
-        this.app.use(express_1.default.json());
+        this.app.use(express_1.default.json({ limit: '50mb' }));
+        this.app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
         this.app.use(express_1.default.static('./public'));
     }
     routes() {
