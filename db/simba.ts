@@ -51,6 +51,10 @@ export const SIMBA = async()=>{
             };
         }
 
+        /**
+         * que pedo wy
+         */
+
         if(CEDISPANrows.length){
             console.log("Sincronizando CEDIS PANTACO...");
             for await (const row of CEDISPANrows) {

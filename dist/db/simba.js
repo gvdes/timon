@@ -79,6 +79,9 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
             }
             ;
         }
+        /**
+         * que pedo wy
+         */
         if (CEDISPANrows.length) {
             console.log("Sincronizando CEDIS PANTACO...");
             try {
