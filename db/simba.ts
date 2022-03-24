@@ -64,7 +64,7 @@ export const SIMBA = async()=>{
                         INNER JOIN products P ON P.id = STO._product
                         INNER JOIN workpoints W ON W.id = STO._workpoint
                     SET
-                        STO.stock="${row.STOCK}",
+                        STO.stock="${row.ACTSTO}",
                         STO.gen=${row.ACTSTO}
                     WHERE P.code="${row.ARTSTO}" AND W.id=2;
                 `);
