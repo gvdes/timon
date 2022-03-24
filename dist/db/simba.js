@@ -88,7 +88,9 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                     UPDATE product_stock STO
                         INNER JOIN products P ON P.id = STO._product
                         INNER JOIN workpoints W ON W.id = STO._workpoint
-                    SET gen=${row.ACTSTO}
+                    SET
+                        STO.stock="${row.STOCK}",
+                        STO.gen=${row.ACTSTO}
                     WHERE P.code="${row.ARTSTO}" AND W.id=2;
                 `);
                     if (results.changedRows) {
