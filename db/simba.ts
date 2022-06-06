@@ -51,11 +51,6 @@ export const SIMBA = async()=>{
             };
         }
 
-        /**
-         * que pedo wy
-         * wrwjerhwgerjh
-         */
-
         if(CEDISPANrows.length){
             console.log("Sincronizando CEDIS PANTACO...");
             for await (const row of CEDISPANrows) {
@@ -79,7 +74,5 @@ export const SIMBA = async()=>{
         const simbaends = `[${moment().format("YYYY/MM/DD h:mm:ss")}]: Simba ha finalizado...`;
         console.log(`${simbaends}\n`);
         console.timeEnd('UPDATEDS');
-    }else{
-        console.log("lazy day!",nday);
-    }
+    }else{ console.log("lazy day!",nday); }
 }

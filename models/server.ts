@@ -53,7 +53,7 @@ class Server{
 
     run(){
         this.app.listen( this.port, ()=>{
-            console.log("Runing on", this.port, '...');
+            console.log("Timon runing's on", this.port, '...');
         });
 
         // SIMBA();
