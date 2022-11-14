@@ -64,7 +64,7 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                             STO.V23 = V23,
                             STO.LRY = LRY,
                             STO.STC = STC,
-                            STO.des="DES"
+                            STO.des= DES
                         WHERE P.code="${row.CODIGO}" AND STO._workpoint = 1`);
                         if (results.changedRows) {
                             rset.SAN.push({ code: row.CODIGO });
