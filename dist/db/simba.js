@@ -59,12 +59,12 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                         UPDATE product_stock STO
                             INNER JOIN products P ON P.id = STO._product
                         SET
-                            STO.stock= GEN,
-                            STO.gen= GEN,
-                            STO.V23 = V23,
-                            STO.LRY = LRY,
-                            STO.STC = STC,
-                            STO.des= DES
+                            STO.stock= ${row.GEN},
+                            STO.gen= ${row.GEN},
+                            STO.V23 = ${row.V23},
+                            STO.LRY = ${row.LRY},
+                            STO.STC = ${row.STC},
+                            STO.des= ${row.DES}
                         WHERE P.code="${row.CODIGO}" AND STO._workpoint = 1`);
                         if (results.changedRows) {
                             rset.SAN.push({ code: row.CODIGO });
