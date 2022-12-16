@@ -13,14 +13,14 @@ export const SIMBA = async()=>{
     // Se ejecuta todos los dias que no son domingo entre las 8:55 am hasta las 9:00 pm
 
     try {
-        if( (nday!=7) && (now.isBetween(hourstart,hourend)) ){
+        if((now.isBetween(hourstart,hourend)) ){
             const simbainit = `[${moment().format("YYYY/MM/DD h:mm:ss")}]: Simba ha iniciado...`;
             console.log(`\n${simbainit}`);
-            // let WRHGEN:any=[], WRHDES:any=[] ;
     
-            let rset:any = { SAN:[], PAN:[] };
+            let rset:any = { SAN:[], PAN:[], BOL:[] };
     
             console.time('SELECTS');
+
             const CEDISSANrows:Array<any> = await fsol.query(
                 `SELECT
                     F_STO.ARTSTO AS CODIGO,
@@ -32,9 +32,10 @@ export const SIMBA = async()=>{
                 FROM F_STO GROUP BY F_STO.ARTSTO;`
             );
             const CEDISPANrows:Array<any> = await fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="PAN" ORDER BY ARTSTO;');
+            const CEDISBOLrows:Array<any> = await fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="BOL" ORDER BY ARTSTO;');
             console.timeEnd('SELECTS');
-            
             console.time('UPDATEDS');
+            
             if(CEDISSANrows.length){
                 console.log("Sincronizando CEDISSAP (GENERAL y DESCOMPUESTO)");
                 for await ( const row of CEDISSANrows ){
@@ -68,17 +69,36 @@ export const SIMBA = async()=>{
                     if(results.changedRows){ rset.PAN.push({code:row.ARTSTO}); }
                 }
             }
+
+            if(CEDISBOLrows.length){
+                console.log("Sincronizando CEDIS BOLIVIA...");
+                for await (const row of CEDISBOLrows) {
+                    const [results]:any = await vizapi.query(`
+                        UPDATE product_stock STO
+                            INNER JOIN products P ON P.id = STO._product
+                            INNER JOIN workpoints W ON W.id = STO._workpoint
+                        SET
+                            STO.stock="${row.ACTSTO}",
+                            STO.gen=${row.ACTSTO}
+                        WHERE P.code="${row.ARTSTO}" AND W.id=13;
+                    `);
+                    if(results.changedRows){ rset.BOL.push({code:row.ARTSTO}); }
+                }
+            }
     
-            console.log("FILAS TOTALES:",(CEDISSANrows.length+CEDISPANrows.length));
+            console.log("FILAS TOTALES:",(CEDISSANrows.length+CEDISPANrows.length+CEDISBOLrows.length));
             console.log("CEDISSAN:",CEDISSANrows.length," UPDATEDS:",rset.SAN.length);
             console.log("CEDISPAN:",CEDISPANrows.length," UPDATEDS:",rset.PAN.length);
+            console.log("CEDISBOL:",CEDISBOLrows.length," UPDATEDS:",rset.BOL.length);
     
-            const simbaends = `[${moment().format("YYYY/MM/DD h:mm:ss")}]: Simba ha finalizado...`;
-            console.log(`${simbaends}\n`);
+            const simbaends = `[${moment().format("YYYY/MM/DD h:mm:ss")}]: Simba ha finalizado, siguiente vuelta en 10 segundos...`;
             console.timeEnd('UPDATEDS');
+            console.log(`${simbaends}\n`);
+            setTimeout(() => { SIMBA(); }, 10000);
         }else{ console.log("lazy day!",nday); }
     } catch (error) {
         console.error(error);
-        console.log("El programa tuvo un error de jecucion, esperando siguiente vuelta...");
+        console.log("El programa tuvo un error de jecucion, esperando siguiente vuelta en 10s...");
+        setTimeout(() => { SIMBA(); }, 10000);
     }
 }

@@ -60,9 +60,9 @@ class Server {
         this.app.listen(this.port, () => {
             console.log("Timon runing's on", this.port, '...');
         });
-        // SIMBA();
+        (0, simba_1.SIMBA)();
         let interval = (process.env.SIMBATIME || 120000);
-        setInterval(() => { (0, simba_1.SIMBA)(); }, interval);
+        // setInterval(()=>{ SIMBA(); }, interval);
     }
 }
 exports.default = Server;

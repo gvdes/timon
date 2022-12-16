@@ -25,7 +25,7 @@ const moment_1 = __importDefault(require("moment"));
 const vizapi_1 = __importDefault(require("../db/vizapi"));
 const fsol = node_adodb_1.default.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process.env.FSOLDB};Persist Security Info=False;`);
 const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
-    var e_1, _a, e_2, _b;
+    var e_1, _a, e_2, _b, e_3, _c;
     const hourstart = (0, moment_1.default)('08:55:00', 'hh:mm:ss');
     const hourend = (0, moment_1.default)('21:00:00', 'hh:mm:ss');
     const now = (0, moment_1.default)();
@@ -33,11 +33,10 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
     const workpoint = JSON.parse((process.env.WORKPOINT || ""));
     // Se ejecuta todos los dias que no son domingo entre las 8:55 am hasta las 9:00 pm
     try {
-        if ((nday != 7) && (now.isBetween(hourstart, hourend))) {
+        if ((now.isBetween(hourstart, hourend))) {
             const simbainit = `[${(0, moment_1.default)().format("YYYY/MM/DD h:mm:ss")}]: Simba ha iniciado...`;
             console.log(`\n${simbainit}`);
-            // let WRHGEN:any=[], WRHDES:any=[] ;
-            let rset = { SAN: [], PAN: [] };
+            let rset = { SAN: [], PAN: [], BOL: [] };
             console.time('SELECTS');
             const CEDISSANrows = yield fsol.query(`SELECT
                     F_STO.ARTSTO AS CODIGO,
@@ -48,6 +47,7 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                     SUM(IIF(F_STO.ALMSTO = 'DES', F_STO.ACTSTO,0 )) AS DES
                 FROM F_STO GROUP BY F_STO.ARTSTO;`);
             const CEDISPANrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="PAN" ORDER BY ARTSTO;');
+            const CEDISBOLrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="BOL" ORDER BY ARTSTO;');
             console.timeEnd('SELECTS');
             console.time('UPDATEDS');
             if (CEDISSANrows.length) {
@@ -107,12 +107,41 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                     finally { if (e_2) throw e_2.error; }
                 }
             }
-            console.log("FILAS TOTALES:", (CEDISSANrows.length + CEDISPANrows.length));
+            if (CEDISBOLrows.length) {
+                console.log("Sincronizando CEDIS BOLIVIA...");
+                try {
+                    for (var CEDISBOLrows_1 = __asyncValues(CEDISBOLrows), CEDISBOLrows_1_1; CEDISBOLrows_1_1 = yield CEDISBOLrows_1.next(), !CEDISBOLrows_1_1.done;) {
+                        const row = CEDISBOLrows_1_1.value;
+                        const [results] = yield vizapi_1.default.query(`
+                        UPDATE product_stock STO
+                            INNER JOIN products P ON P.id = STO._product
+                            INNER JOIN workpoints W ON W.id = STO._workpoint
+                        SET
+                            STO.stock="${row.ACTSTO}",
+                            STO.gen=${row.ACTSTO}
+                        WHERE P.code="${row.ARTSTO}" AND W.id=13;
+                    `);
+                        if (results.changedRows) {
+                            rset.BOL.push({ code: row.ARTSTO });
+                        }
+                    }
+                }
+                catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                finally {
+                    try {
+                        if (CEDISBOLrows_1_1 && !CEDISBOLrows_1_1.done && (_c = CEDISBOLrows_1.return)) yield _c.call(CEDISBOLrows_1);
+                    }
+                    finally { if (e_3) throw e_3.error; }
+                }
+            }
+            console.log("FILAS TOTALES:", (CEDISSANrows.length + CEDISPANrows.length + CEDISBOLrows.length));
             console.log("CEDISSAN:", CEDISSANrows.length, " UPDATEDS:", rset.SAN.length);
             console.log("CEDISPAN:", CEDISPANrows.length, " UPDATEDS:", rset.PAN.length);
-            const simbaends = `[${(0, moment_1.default)().format("YYYY/MM/DD h:mm:ss")}]: Simba ha finalizado...`;
-            console.log(`${simbaends}\n`);
+            console.log("CEDISBOL:", CEDISBOLrows.length, " UPDATEDS:", rset.BOL.length);
+            const simbaends = `[${(0, moment_1.default)().format("YYYY/MM/DD h:mm:ss")}]: Simba ha finalizado, siguiente vuelta en 10 segundos...`;
             console.timeEnd('UPDATEDS');
+            console.log(`${simbaends}\n`);
+            setTimeout(() => { (0, exports.SIMBA)(); }, 10000);
         }
         else {
             console.log("lazy day!", nday);
@@ -120,7 +149,8 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
     }
     catch (error) {
         console.error(error);
-        console.log("El programa tuvo un error de jecucion, esperando siguiente vuelta...");
+        console.log("El programa tuvo un error de jecucion, esperando siguiente vuelta en 10s...");
+        setTimeout(() => { (0, exports.SIMBA)(); }, 10000);
     }
 });
 exports.SIMBA = SIMBA;
