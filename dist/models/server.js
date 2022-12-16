@@ -61,8 +61,6 @@ class Server {
             console.log("Timon runing's on", this.port, '...');
         });
         (0, simba_1.SIMBA)();
-        let interval = (process.env.SIMBATIME || 120000);
-        // setInterval(()=>{ SIMBA(); }, interval);
     }
 }
 exports.default = Server;

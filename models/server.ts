@@ -57,8 +57,6 @@ class Server{
         });
 
         SIMBA();
-        let interval:any = (process.env.SIMBATIME||120000);
-        // setInterval(()=>{ SIMBA(); }, interval);
     }
 }
 
