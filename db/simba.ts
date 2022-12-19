@@ -5,15 +5,17 @@ const fsol = accdb.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process
 
 export const SIMBA = async()=>{
     const hourstart = moment('08:55:00', 'hh:mm:ss');
-    const hourend = moment('21:00:00', 'hh:mm:ss');
+    const hourend = moment('11:00:00', 'hh:mm:ss');
     const now = moment();
     const nday:any = moment().format("d");
     const workpoint = JSON.parse((process.env.WORKPOINT||""));
+    let interval:any = null;
 
-    // Se ejecuta todos los dias que no son domingo entre las 8:55 am hasta las 9:00 pm
+    // Se ejecuta todos los dias que no son domingo desde las 8:55 am hasta las 9:00 pm
 
     try {
         if((now.isBetween(hourstart,hourend)) ){
+            clearInterval(interval);
             const simbainit = `[${moment().format("YYYY/MM/DD h:mm:ss")}]: Simba ha iniciado...`;
             console.log(`\n${simbainit}`);
     
@@ -95,7 +97,7 @@ export const SIMBA = async()=>{
             console.timeEnd('UPDATEDS');
             console.log(`${simbaends}\n`);
             setTimeout(() => { SIMBA(); }, 10000);
-        }else{ console.log("lazy day!",nday); }
+        }else{ setTimeout(() => { SIMBA(); }, 300000); }
     } catch (error) {
         console.error(error);
         console.log("El programa tuvo un error de jecucion, esperando siguiente vuelta en 10s...");
