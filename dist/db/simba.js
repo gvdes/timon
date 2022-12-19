@@ -27,16 +27,14 @@ const fsol = node_adodb_1.default.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data S
 const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
     var e_1, _a, e_2, _b, e_3, _c;
     const hourstart = (0, moment_1.default)('08:55:00', 'hh:mm:ss');
-    const hourend = (0, moment_1.default)('11:00:00', 'hh:mm:ss');
+    const hourend = (0, moment_1.default)('22:00:00', 'hh:mm:ss');
     const now = (0, moment_1.default)();
     const nday = (0, moment_1.default)().format("d");
     const workpoint = JSON.parse((process.env.WORKPOINT || ""));
-    let interval = null;
     // Se ejecuta todos los dias que no son domingo desde las 8:55 am hasta las 9:00 pm
     try {
         if ((now.isBetween(hourstart, hourend))) {
-            clearInterval(interval);
-            const simbainit = `[${(0, moment_1.default)().format("YYYY/MM/DD h:mm:ss")}]: Simba ha iniciado...`;
+            const simbainit = `\n[${(0, moment_1.default)().format("YYYY/MM/DD h:mm:ss")}]: Simba ha iniciado...`;
             console.log(`\n${simbainit}`);
             let rset = { SAN: [], PAN: [], BOL: [] };
             console.time('SELECTS');

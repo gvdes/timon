@@ -5,24 +5,21 @@ const fsol = accdb.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process
 
 export const SIMBA = async()=>{
     const hourstart = moment('08:55:00', 'hh:mm:ss');
-    const hourend = moment('11:00:00', 'hh:mm:ss');
+    const hourend = moment('22:00:00', 'hh:mm:ss');
     const now = moment();
     const nday:any = moment().format("d");
     const workpoint = JSON.parse((process.env.WORKPOINT||""));
-    let interval:any = null;
 
     // Se ejecuta todos los dias que no son domingo desde las 8:55 am hasta las 9:00 pm
 
     try {
         if((now.isBetween(hourstart,hourend)) ){
-            clearInterval(interval);
-            const simbainit = `[${moment().format("YYYY/MM/DD h:mm:ss")}]: Simba ha iniciado...`;
+            const simbainit = `\n[${moment().format("YYYY/MM/DD h:mm:ss")}]: Simba ha iniciado...`;
             console.log(`\n${simbainit}`);
     
             let rset:any = { SAN:[], PAN:[], BOL:[] };
     
             console.time('SELECTS');
-
             const CEDISSANrows:Array<any> = await fsol.query(
                 `SELECT
                     F_STO.ARTSTO AS CODIGO,
