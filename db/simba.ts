@@ -30,7 +30,7 @@ export const SIMBA = async()=>{
                     SUM(IIF(F_STO.ALMSTO = 'DES', F_STO.ACTSTO,0 )) AS DES
                 FROM F_STO GROUP BY F_STO.ARTSTO;`
             );
-            const CEDISPANrows:Array<any> = await fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="PAN" ORDER BY ARTSTO;');
+            const CEDISPANrows:Array<any> = await fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="STC" ORDER BY ARTSTO;');
             const CEDISBOLrows:Array<any> = await fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="BOL" ORDER BY ARTSTO;');
             console.timeEnd('SELECTS');
             console.time('UPDATEDS');
@@ -53,8 +53,24 @@ export const SIMBA = async()=>{
                 };
             }
     
+            // if(CEDISPANrows.length){
+            //     console.log("Sincronizando CEDIS PANTACO...");
+            //     for await (const row of CEDISPANrows) {
+            //         const [results]:any = await vizapi.query(`
+            //             UPDATE product_stock STO
+            //                 INNER JOIN products P ON P.id = STO._product
+            //                 INNER JOIN workpoints W ON W.id = STO._workpoint
+            //             SET
+            //                 STO.stock="${row.ACTSTO}",
+            //                 STO.gen=${row.ACTSTO}
+            //             WHERE P.code="${row.ARTSTO}" AND W.id=2;
+            //         `);
+            //         if(results.changedRows){ rset.PAN.push({code:row.ARTSTO}); }
+            //     }
+            // }
+
             if(CEDISPANrows.length){
-                console.log("Sincronizando CEDIS PANTACO...");
+                console.log("Sincronizando CEDIS TEXCOCO...");
                 for await (const row of CEDISPANrows) {
                     const [results]:any = await vizapi.query(`
                         UPDATE product_stock STO

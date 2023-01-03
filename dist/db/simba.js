@@ -46,7 +46,7 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                     SUM(IIF(F_STO.ALMSTO = "STC", F_STO.ACTSTO,0)) AS STC,
                     SUM(IIF(F_STO.ALMSTO = 'DES', F_STO.ACTSTO,0 )) AS DES
                 FROM F_STO GROUP BY F_STO.ARTSTO;`);
-            const CEDISPANrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="PAN" ORDER BY ARTSTO;');
+            const CEDISPANrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="STC" ORDER BY ARTSTO;');
             const CEDISBOLrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="BOL" ORDER BY ARTSTO;');
             console.timeEnd('SELECTS');
             console.time('UPDATEDS');
@@ -80,8 +80,23 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                 }
                 ;
             }
+            // if(CEDISPANrows.length){
+            //     console.log("Sincronizando CEDIS PANTACO...");
+            //     for await (const row of CEDISPANrows) {
+            //         const [results]:any = await vizapi.query(`
+            //             UPDATE product_stock STO
+            //                 INNER JOIN products P ON P.id = STO._product
+            //                 INNER JOIN workpoints W ON W.id = STO._workpoint
+            //             SET
+            //                 STO.stock="${row.ACTSTO}",
+            //                 STO.gen=${row.ACTSTO}
+            //             WHERE P.code="${row.ARTSTO}" AND W.id=2;
+            //         `);
+            //         if(results.changedRows){ rset.PAN.push({code:row.ARTSTO}); }
+            //     }
+            // }
             if (CEDISPANrows.length) {
-                console.log("Sincronizando CEDIS PANTACO...");
+                console.log("Sincronizando CEDIS TEXCOCO...");
                 try {
                     for (var CEDISPANrows_1 = __asyncValues(CEDISPANrows), CEDISPANrows_1_1; CEDISPANrows_1_1 = yield CEDISPANrows_1.next(), !CEDISPANrows_1_1.done;) {
                         const row = CEDISPANrows_1_1.value;
