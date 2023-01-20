@@ -32,7 +32,7 @@ export const SIMBA = async()=>{
             );
             const CEDISTCOrows:Array<any> = await fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="STC" ORDER BY ARTSTO;');
             const CEDISPANrows:Array<any> = await fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="PAN" ORDER BY ARTSTO;');
-            const CEDISBOLrows:Array<any> = await fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="BOL" ORDER BY ARTSTO;');
+            // const CEDISBOLrows:Array<any> = await fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="BOL" ORDER BY ARTSTO;');
             console.timeEnd('SELECTS');
             console.time('UPDATEDS');
             
@@ -86,26 +86,27 @@ export const SIMBA = async()=>{
                 }
             }
 
-            if(CEDISBOLrows.length){
-                console.log("Sincronizando CEDIS BOLIVIA...");
-                for await (const row of CEDISBOLrows) {
-                    const [results]:any = await vizapi.query(`
-                        UPDATE product_stock STO
-                            INNER JOIN products P ON P.id = STO._product
-                            INNER JOIN workpoints W ON W.id = STO._workpoint
-                        SET
-                            STO.stock="${row.ACTSTO}",
-                            STO.gen=${row.ACTSTO}
-                        WHERE P.code="${row.ARTSTO}" AND W.id=13;
-                    `);
-                    if(results.changedRows){ rset.BOL.push({code:row.ARTSTO}); }
-                }
-            }
+            // if(CEDISBOLrows.length){
+            //     console.log("Sincronizando CEDIS BOLIVIA...");
+            //     for await (const row of CEDISBOLrows) {
+            //         const [results]:any = await vizapi.query(`
+            //             UPDATE product_stock STO
+            //                 INNER JOIN products P ON P.id = STO._product
+            //                 INNER JOIN workpoints W ON W.id = STO._workpoint
+            //             SET
+            //                 STO.stock="${row.ACTSTO}",
+            //                 STO.gen=${row.ACTSTO}
+            //             WHERE P.code="${row.ARTSTO}" AND W.id=13;
+            //         `);
+            //         if(results.changedRows){ rset.BOL.push({code:row.ARTSTO}); }
+            //     }
+            // }
     
-            console.log("FILAS TOTALES:",(CEDISSANrows.length+CEDISTCOrows.length+CEDISBOLrows.length+CEDISPANrows.length));
+            // console.log("FILAS TOTALES:",(CEDISSANrows.length+CEDISTCOrows.length+CEDISBOLrows.length+CEDISPANrows.length));
+            console.log("FILAS TOTALES:",(CEDISSANrows.length+CEDISTCOrows.length+CEDISPANrows.length));
             console.log("CEDISSAN:",CEDISSANrows.length," UPDATEDS:",rset.SAN.length);
             console.log("CEDISPAN:",CEDISTCOrows.length," UPDATEDS:",rset.TCO.length);
-            console.log("CEDISBOL:",CEDISBOLrows.length," UPDATEDS:",rset.BOL.length);
+            // console.log("CEDISBOL:",CEDISBOLrows.length," UPDATEDS:",rset.BOL.length);
             console.log("CEDISTCO:",CEDISPANrows.length," UPDATEDS:",rset.PAN.length);
     
             const simbaends = `[${moment().format("YYYY/MM/DD h:mm:ss")}]: Simba ha finalizado, siguiente vuelta en 10 segundos...`;

@@ -25,7 +25,7 @@ const moment_1 = __importDefault(require("moment"));
 const vizapi_1 = __importDefault(require("../db/vizapi"));
 const fsol = node_adodb_1.default.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process.env.FSOLDB};Persist Security Info=False;`);
 const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
-    var e_1, _a, e_2, _b, e_3, _c, e_4, _d;
+    var e_1, _a, e_2, _b, e_3, _c;
     const hourstart = (0, moment_1.default)('08:55:00', 'hh:mm:ss');
     const hourend = (0, moment_1.default)('22:00:00', 'hh:mm:ss');
     const now = (0, moment_1.default)();
@@ -48,7 +48,7 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                 FROM F_STO GROUP BY F_STO.ARTSTO;`);
             const CEDISTCOrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="STC" ORDER BY ARTSTO;');
             const CEDISPANrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="PAN" ORDER BY ARTSTO;');
-            const CEDISBOLrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="BOL" ORDER BY ARTSTO;');
+            // const CEDISBOLrows:Array<any> = await fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="BOL" ORDER BY ARTSTO;');
             console.timeEnd('SELECTS');
             console.time('UPDATEDS');
             if (CEDISSANrows.length) {
@@ -135,37 +135,26 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                     finally { if (e_3) throw e_3.error; }
                 }
             }
-            if (CEDISBOLrows.length) {
-                console.log("Sincronizando CEDIS BOLIVIA...");
-                try {
-                    for (var CEDISBOLrows_1 = __asyncValues(CEDISBOLrows), CEDISBOLrows_1_1; CEDISBOLrows_1_1 = yield CEDISBOLrows_1.next(), !CEDISBOLrows_1_1.done;) {
-                        const row = CEDISBOLrows_1_1.value;
-                        const [results] = yield vizapi_1.default.query(`
-                        UPDATE product_stock STO
-                            INNER JOIN products P ON P.id = STO._product
-                            INNER JOIN workpoints W ON W.id = STO._workpoint
-                        SET
-                            STO.stock="${row.ACTSTO}",
-                            STO.gen=${row.ACTSTO}
-                        WHERE P.code="${row.ARTSTO}" AND W.id=13;
-                    `);
-                        if (results.changedRows) {
-                            rset.BOL.push({ code: row.ARTSTO });
-                        }
-                    }
-                }
-                catch (e_4_1) { e_4 = { error: e_4_1 }; }
-                finally {
-                    try {
-                        if (CEDISBOLrows_1_1 && !CEDISBOLrows_1_1.done && (_d = CEDISBOLrows_1.return)) yield _d.call(CEDISBOLrows_1);
-                    }
-                    finally { if (e_4) throw e_4.error; }
-                }
-            }
-            console.log("FILAS TOTALES:", (CEDISSANrows.length + CEDISTCOrows.length + CEDISBOLrows.length + CEDISPANrows.length));
+            // if(CEDISBOLrows.length){
+            //     console.log("Sincronizando CEDIS BOLIVIA...");
+            //     for await (const row of CEDISBOLrows) {
+            //         const [results]:any = await vizapi.query(`
+            //             UPDATE product_stock STO
+            //                 INNER JOIN products P ON P.id = STO._product
+            //                 INNER JOIN workpoints W ON W.id = STO._workpoint
+            //             SET
+            //                 STO.stock="${row.ACTSTO}",
+            //                 STO.gen=${row.ACTSTO}
+            //             WHERE P.code="${row.ARTSTO}" AND W.id=13;
+            //         `);
+            //         if(results.changedRows){ rset.BOL.push({code:row.ARTSTO}); }
+            //     }
+            // }
+            // console.log("FILAS TOTALES:",(CEDISSANrows.length+CEDISTCOrows.length+CEDISBOLrows.length+CEDISPANrows.length));
+            console.log("FILAS TOTALES:", (CEDISSANrows.length + CEDISTCOrows.length + CEDISPANrows.length));
             console.log("CEDISSAN:", CEDISSANrows.length, " UPDATEDS:", rset.SAN.length);
             console.log("CEDISPAN:", CEDISTCOrows.length, " UPDATEDS:", rset.TCO.length);
-            console.log("CEDISBOL:", CEDISBOLrows.length, " UPDATEDS:", rset.BOL.length);
+            // console.log("CEDISBOL:",CEDISBOLrows.length," UPDATEDS:",rset.BOL.length);
             console.log("CEDISTCO:", CEDISPANrows.length, " UPDATEDS:", rset.PAN.length);
             const simbaends = `[${(0, moment_1.default)().format("YYYY/MM/DD h:mm:ss")}]: Simba ha finalizado, siguiente vuelta en 10 segundos...`;
             console.timeEnd('UPDATEDS');
