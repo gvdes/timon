@@ -25,7 +25,7 @@ const moment_1 = __importDefault(require("moment"));
 const vizapi_1 = __importDefault(require("../db/vizapi"));
 const fsol = node_adodb_1.default.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process.env.FSOLDB};Persist Security Info=False;`);
 const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
-    var e_1, _a, e_2, _b, e_3, _c;
+    var _a, e_1, _b, _c, _d, e_2, _e, _f, _g, e_3, _h, _j, _k, e_4, _l, _m;
     const hourstart = (0, moment_1.default)('08:55:00', 'hh:mm:ss');
     const hourend = (0, moment_1.default)('22:00:00', 'hh:mm:ss');
     const now = (0, moment_1.default)();
@@ -43,19 +43,20 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                     SUM(IIF(F_STO.ALMSTO = "GEN", F_STO.ACTSTO,0)) AS GEN,
                     SUM(IIF(F_STO.ALMSTO = "236", F_STO.ACTSTO,0)) AS V23,
                     SUM(IIF(F_STO.ALMSTO = "LRY",F_STO.ACTSTO,0)) AS LRY,
-                    SUM(IIF(F_STO.ALMSTO = "BOL", F_STO.ACTSTO,0)) AS STC,
                     SUM(IIF(F_STO.ALMSTO = 'DES', F_STO.ACTSTO,0 )) AS DES
                 FROM F_STO GROUP BY F_STO.ARTSTO;`);
             const CEDISTCOrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="STC" ORDER BY ARTSTO;');
             const CEDISPANrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="PAN" ORDER BY ARTSTO;');
-            // const CEDISBOLrows:Array<any> = await fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="BOL" ORDER BY ARTSTO;');
+            const CEDISBOLrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="BOL" ORDER BY ARTSTO;');
             console.timeEnd('SELECTS');
             console.time('UPDATEDS');
             if (CEDISSANrows.length) {
                 console.log("Sincronizando CEDISSAP (GENERAL y DESCOMPUESTO)");
                 try {
-                    for (var CEDISSANrows_1 = __asyncValues(CEDISSANrows), CEDISSANrows_1_1; CEDISSANrows_1_1 = yield CEDISSANrows_1.next(), !CEDISSANrows_1_1.done;) {
-                        const row = CEDISSANrows_1_1.value;
+                    for (var _o = true, CEDISSANrows_1 = __asyncValues(CEDISSANrows), CEDISSANrows_1_1; CEDISSANrows_1_1 = yield CEDISSANrows_1.next(), _a = CEDISSANrows_1_1.done, !_a; _o = true) {
+                        _c = CEDISSANrows_1_1.value;
+                        _o = false;
+                        const row = _c;
                         const [results] = yield vizapi_1.default.query(`
                         UPDATE product_stock STO
                             INNER JOIN products P ON P.id = STO._product
@@ -64,7 +65,6 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                             STO.gen= ${row.GEN},
                             STO.V23 = ${row.V23},
                             STO.LRY = ${row.LRY},
-                            STO.STC = ${row.STC},
                             STO.des= ${row.DES}
                         WHERE P.code="${row.CODIGO}" AND STO._workpoint = 1`);
                         if (results.changedRows) {
@@ -75,7 +75,7 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                 catch (e_1_1) { e_1 = { error: e_1_1 }; }
                 finally {
                     try {
-                        if (CEDISSANrows_1_1 && !CEDISSANrows_1_1.done && (_a = CEDISSANrows_1.return)) yield _a.call(CEDISSANrows_1);
+                        if (!_o && !_a && (_b = CEDISSANrows_1.return)) yield _b.call(CEDISSANrows_1);
                     }
                     finally { if (e_1) throw e_1.error; }
                 }
@@ -84,8 +84,10 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
             if (CEDISPANrows.length) {
                 console.log("Sincronizando CEDIS PANTACO...");
                 try {
-                    for (var CEDISPANrows_1 = __asyncValues(CEDISPANrows), CEDISPANrows_1_1; CEDISPANrows_1_1 = yield CEDISPANrows_1.next(), !CEDISPANrows_1_1.done;) {
-                        const row = CEDISPANrows_1_1.value;
+                    for (var _p = true, CEDISPANrows_1 = __asyncValues(CEDISPANrows), CEDISPANrows_1_1; CEDISPANrows_1_1 = yield CEDISPANrows_1.next(), _d = CEDISPANrows_1_1.done, !_d; _p = true) {
+                        _f = CEDISPANrows_1_1.value;
+                        _p = false;
+                        const row = _f;
                         const [results] = yield vizapi_1.default.query(`
                         UPDATE product_stock STO
                             INNER JOIN products P ON P.id = STO._product
@@ -103,7 +105,7 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                 catch (e_2_1) { e_2 = { error: e_2_1 }; }
                 finally {
                     try {
-                        if (CEDISPANrows_1_1 && !CEDISPANrows_1_1.done && (_b = CEDISPANrows_1.return)) yield _b.call(CEDISPANrows_1);
+                        if (!_p && !_d && (_e = CEDISPANrows_1.return)) yield _e.call(CEDISPANrows_1);
                     }
                     finally { if (e_2) throw e_2.error; }
                 }
@@ -111,8 +113,10 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
             if (CEDISTCOrows.length) {
                 console.log("Sincronizando CEDIS TEXCOCO...");
                 try {
-                    for (var CEDISTCOrows_1 = __asyncValues(CEDISTCOrows), CEDISTCOrows_1_1; CEDISTCOrows_1_1 = yield CEDISTCOrows_1.next(), !CEDISTCOrows_1_1.done;) {
-                        const row = CEDISTCOrows_1_1.value;
+                    for (var _q = true, CEDISTCOrows_1 = __asyncValues(CEDISTCOrows), CEDISTCOrows_1_1; CEDISTCOrows_1_1 = yield CEDISTCOrows_1.next(), _g = CEDISTCOrows_1_1.done, !_g; _q = true) {
+                        _j = CEDISTCOrows_1_1.value;
+                        _q = false;
+                        const row = _j;
                         const [results] = yield vizapi_1.default.query(`
                         UPDATE product_stock STO
                             INNER JOIN products P ON P.id = STO._product
@@ -130,31 +134,45 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                 catch (e_3_1) { e_3 = { error: e_3_1 }; }
                 finally {
                     try {
-                        if (CEDISTCOrows_1_1 && !CEDISTCOrows_1_1.done && (_c = CEDISTCOrows_1.return)) yield _c.call(CEDISTCOrows_1);
+                        if (!_q && !_g && (_h = CEDISTCOrows_1.return)) yield _h.call(CEDISTCOrows_1);
                     }
                     finally { if (e_3) throw e_3.error; }
                 }
             }
-            // if(CEDISBOLrows.length){
-            //     console.log("Sincronizando CEDIS BOLIVIA...");
-            //     for await (const row of CEDISBOLrows) {
-            //         const [results]:any = await vizapi.query(`
-            //             UPDATE product_stock STO
-            //                 INNER JOIN products P ON P.id = STO._product
-            //                 INNER JOIN workpoints W ON W.id = STO._workpoint
-            //             SET
-            //                 STO.stock="${row.ACTSTO}",
-            //                 STO.gen=${row.ACTSTO}
-            //             WHERE P.code="${row.ARTSTO}" AND W.id=13;
-            //         `);
-            //         if(results.changedRows){ rset.BOL.push({code:row.ARTSTO}); }
-            //     }
-            // }
+            if (CEDISBOLrows.length) {
+                console.log("Sincronizando CEDIS BOLIVIA...");
+                try {
+                    for (var _r = true, CEDISBOLrows_1 = __asyncValues(CEDISBOLrows), CEDISBOLrows_1_1; CEDISBOLrows_1_1 = yield CEDISBOLrows_1.next(), _k = CEDISBOLrows_1_1.done, !_k; _r = true) {
+                        _m = CEDISBOLrows_1_1.value;
+                        _r = false;
+                        const row = _m;
+                        const [results] = yield vizapi_1.default.query(`
+                        UPDATE product_stock STO
+                            INNER JOIN products P ON P.id = STO._product
+                            INNER JOIN workpoints W ON W.id = STO._workpoint
+                        SET
+                            STO.stock="${row.ACTSTO}",
+                            STO.gen=${row.ACTSTO}
+                        WHERE P.code="${row.ARTSTO}" AND W.id=13;
+                    `);
+                        if (results.changedRows) {
+                            rset.BOL.push({ code: row.ARTSTO });
+                        }
+                    }
+                }
+                catch (e_4_1) { e_4 = { error: e_4_1 }; }
+                finally {
+                    try {
+                        if (!_r && !_k && (_l = CEDISBOLrows_1.return)) yield _l.call(CEDISBOLrows_1);
+                    }
+                    finally { if (e_4) throw e_4.error; }
+                }
+            }
             // console.log("FILAS TOTALES:",(CEDISSANrows.length+CEDISTCOrows.length+CEDISBOLrows.length+CEDISPANrows.length));
-            console.log("FILAS TOTALES:", (CEDISSANrows.length + CEDISTCOrows.length + CEDISPANrows.length));
+            console.log("FILAS TOTALES:", (CEDISSANrows.length + CEDISTCOrows.length + CEDISPANrows.length + CEDISBOLrows.length));
             console.log("CEDISSAN:", CEDISSANrows.length, " UPDATEDS:", rset.SAN.length);
             console.log("CEDISPAN:", CEDISTCOrows.length, " UPDATEDS:", rset.TCO.length);
-            // console.log("CEDISBOL:",CEDISBOLrows.length," UPDATEDS:",rset.BOL.length);
+            console.log("CEDISBOL:", CEDISBOLrows.length, " UPDATEDS:", rset.BOL.length);
             console.log("CEDISTCO:", CEDISPANrows.length, " UPDATEDS:", rset.PAN.length);
             const simbaends = `[${(0, moment_1.default)().format("YYYY/MM/DD h:mm:ss")}]: Simba ha finalizado, siguiente vuelta en 10 segundos...`;
             console.timeEnd('UPDATEDS');

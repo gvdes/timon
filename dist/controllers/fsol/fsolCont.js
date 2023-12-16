@@ -27,7 +27,7 @@ const WrkpointsMD_1 = __importDefault(require("../../models/WrkpointsMD"));
 const HelpresCont_1 = require("../vizapi/HelpresCont");
 const fsol = node_adodb_1.default.open(`Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${process.env.FSOLDB};Persist Security Info=False;`);
 const SYNCCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
-    var e_1, _a;
+    var _a, e_1, _b, _c;
     console.log("Iniciando sincronizacion de clientes..");
     const wkpreq = req.body.sucursal;
     let cambiosdetarifa = [];
@@ -111,8 +111,10 @@ const SYNCCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* (
                         const workpoints = yield WrkpointsMD_1.default.findAll();
                         const wkps = JSON.parse(JSON.stringify(workpoints)).filter((w) => (w.active && w.id > 2));
                         try {
-                            for (var wkps_1 = __asyncValues(wkps), wkps_1_1; wkps_1_1 = yield wkps_1.next(), !wkps_1_1.done;) {
-                                const wkp = wkps_1_1.value;
+                            for (var _d = true, wkps_1 = __asyncValues(wkps), wkps_1_1; wkps_1_1 = yield wkps_1.next(), _a = wkps_1_1.done, !_a; _d = true) {
+                                _c = wkps_1_1.value;
+                                _d = false;
+                                const wkp = _c;
                                 const con = yield (0, HelpresCont_1.wkpConnection)(wkp);
                                 if (con.state) {
                                     const action = yield (0, HelpresCont_1.wkpRequest)(wkp, { rows }, "/fsol/sync/clients", "POST");
@@ -129,7 +131,7 @@ const SYNCCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* (
                         catch (e_1_1) { e_1 = { error: e_1_1 }; }
                         finally {
                             try {
-                                if (wkps_1_1 && !wkps_1_1.done && (_a = wkps_1.return)) yield _a.call(wkps_1);
+                                if (!_d && !_a && (_b = wkps_1.return)) yield _b.call(wkps_1);
                             }
                             finally { if (e_1) throw e_1.error; }
                         }
@@ -150,7 +152,7 @@ const SYNCCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.SYNCCLIENTS = SYNCCLIENTS;
 const SYNCPRODSFAMS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
-    var e_2, _b;
+    var _e, e_2, _f, _g;
     const wkpreq = req.body.sucursal;
     const fecha = req.body.fecha;
     const accion = req.body.accion;
@@ -200,8 +202,10 @@ const SYNCPRODSFAMS = (req, resp) => __awaiter(void 0, void 0, void 0, function*
                 const workpoints = yield WrkpointsMD_1.default.findAll();
                 const wkps = JSON.parse(JSON.stringify(workpoints)).filter((w) => (w.active && w.id > 2));
                 try {
-                    for (var wkps_2 = __asyncValues(wkps), wkps_2_1; wkps_2_1 = yield wkps_2.next(), !wkps_2_1.done;) {
-                        const wkp = wkps_2_1.value;
+                    for (var _h = true, wkps_2 = __asyncValues(wkps), wkps_2_1; wkps_2_1 = yield wkps_2.next(), _e = wkps_2_1.done, !_e; _h = true) {
+                        _g = wkps_2_1.value;
+                        _h = false;
+                        const wkp = _g;
                         const con = yield (0, HelpresCont_1.wkpConnection)(wkp);
                         if (con.state) {
                             const action = yield (0, HelpresCont_1.wkpRequest)(wkp, { rows }, "/fsol/sync/familiarizations", "POST");
@@ -218,7 +222,7 @@ const SYNCPRODSFAMS = (req, resp) => __awaiter(void 0, void 0, void 0, function*
                 catch (e_2_1) { e_2 = { error: e_2_1 }; }
                 finally {
                     try {
-                        if (wkps_2_1 && !wkps_2_1.done && (_b = wkps_2.return)) yield _b.call(wkps_2);
+                        if (!_h && !_e && (_f = wkps_2.return)) yield _f.call(wkps_2);
                     }
                     finally { if (e_2) throw e_2.error; }
                 }
@@ -248,7 +252,7 @@ const LISTCLIENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.LISTCLIENTS = LISTCLIENTS;
 const SYNCAGENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
-    var e_3, _c;
+    var _j, e_3, _k, _l;
     console.log("Iniciando sincronizacion de Agentes...");
     const wkpreq = req.body.sucursal;
     const today = (0, moment_1.default)().format('YYYY/MM/DD'); // se obtiene la fecha del dia en curso
@@ -325,8 +329,10 @@ const SYNCAGENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* ()
                         const workpoints = yield WrkpointsMD_1.default.findAll();
                         const wkps = JSON.parse(JSON.stringify(workpoints)).filter((w) => (w.active && w.id > 2));
                         try {
-                            for (var wkps_3 = __asyncValues(wkps), wkps_3_1; wkps_3_1 = yield wkps_3.next(), !wkps_3_1.done;) {
-                                const wkp = wkps_3_1.value;
+                            for (var _m = true, wkps_3 = __asyncValues(wkps), wkps_3_1; wkps_3_1 = yield wkps_3.next(), _j = wkps_3_1.done, !_j; _m = true) {
+                                _l = wkps_3_1.value;
+                                _m = false;
+                                const wkp = _l;
                                 const con = yield (0, HelpresCont_1.wkpConnection)(wkp);
                                 if (con.state) {
                                     console.log(`Actualizando agentes en ${wkp.alias}...`);
@@ -343,7 +349,7 @@ const SYNCAGENTS = (req, resp) => __awaiter(void 0, void 0, void 0, function* ()
                         catch (e_3_1) { e_3 = { error: e_3_1 }; }
                         finally {
                             try {
-                                if (wkps_3_1 && !wkps_3_1.done && (_c = wkps_3.return)) yield _c.call(wkps_3);
+                                if (!_m && !_j && (_k = wkps_3.return)) yield _k.call(wkps_3);
                             }
                             finally { if (e_3) throw e_3.error; }
                         }
