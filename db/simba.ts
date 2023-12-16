@@ -94,7 +94,7 @@ export const SIMBA = async()=>{
                         SET
                             STO.stock="${row.ACTSTO}",
                             STO.gen=${row.ACTSTO}
-                        WHERE P.code="${row.ARTSTO}" AND W.id=13;
+                        WHERE P.code="${row.ARTSTO}" AND W.id=24;
                     `);
                     if(results.changedRows){ rset.BOL.push({code:row.ARTSTO}); }
                 }

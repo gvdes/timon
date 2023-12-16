@@ -153,7 +153,7 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                         SET
                             STO.stock="${row.ACTSTO}",
                             STO.gen=${row.ACTSTO}
-                        WHERE P.code="${row.ARTSTO}" AND W.id=13;
+                        WHERE P.code="${row.ARTSTO}" AND W.id=24;
                     `);
                         if (results.changedRows) {
                             rset.BOL.push({ code: row.ARTSTO });
