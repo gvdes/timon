@@ -43,7 +43,8 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                     SUM(IIF(F_STO.ALMSTO = "GEN", F_STO.ACTSTO,0)) AS GEN,
                     SUM(IIF(F_STO.ALMSTO = "236", F_STO.ACTSTO,0)) AS V23,
                     SUM(IIF(F_STO.ALMSTO = "LRY",F_STO.ACTSTO,0)) AS LRY,
-                    SUM(IIF(F_STO.ALMSTO = 'DES', F_STO.ACTSTO,0 )) AS DES
+                    SUM(IIF(F_STO.ALMSTO = 'DES', F_STO.ACTSTO,0 )) AS DES,
+                    SUM(IIF(F_STO.ALMSTO = 'RTA', F_STO.ACTSTO,0 )) AS RTA
                 FROM F_STO GROUP BY F_STO.ARTSTO;`);
             const CEDISTCOrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="STC" ORDER BY ARTSTO;');
             const CEDISPANrows = yield fsol.query('SELECT ALMSTO,ARTSTO,ACTSTO FROM F_STO WHERE ALMSTO="PAN" ORDER BY ARTSTO;');
@@ -65,7 +66,8 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                             STO.gen= ${row.GEN},
                             STO.V23 = ${row.V23},
                             STO.LRY = ${row.LRY},
-                            STO.des= ${row.DES}
+                            STO.des= ${row.DES},
+                            STO.in_transit = ${row.RTA}
                         WHERE P.code="${row.CODIGO}" AND STO._workpoint = 1`);
                         if (results.changedRows) {
                             rset.SAN.push({ code: row.CODIGO });

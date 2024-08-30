@@ -33,7 +33,7 @@ const WarehouseSectionsMD_1 = __importDefault(require("../../models/WarehouseSec
  * @param timeout time the promise will take to resolve
  * @returns A promise that always resolve an state true||false about de server status (meaning if server is on or off)
  */
-const wkpConnection = (wkp, timeout = 1000) => __awaiter(void 0, void 0, void 0, function* () {
+const wkpConnection = (wkp_1, ...args_1) => __awaiter(void 0, [wkp_1, ...args_1], void 0, function* (wkp, timeout = 1000) {
     return new Promise((resolve, reject) => {
         const env = process.env.MODE || "dev";
         const domain = wkp.dominio.split(":"); // enabled just in production mode
@@ -65,7 +65,7 @@ exports.wkpConnection = wkpConnection;
  * @param data: data into the object to send in request, it will always be an object
  * @returns: A promise that always resolves results of remote API
  */
-const wkpRequest = (wkp, data = {}, path = "/fsol/ping", method = "GET") => __awaiter(void 0, void 0, void 0, function* () {
+const wkpRequest = (wkp_1, ...args_1) => __awaiter(void 0, [wkp_1, ...args_1], void 0, function* (wkp, data = {}, path = "/fsol/ping", method = "GET") {
     return new Promise((resolve, reject) => {
         let env = process.env.MODE || "dev";
         const domain = wkp.dominio.split(":");
@@ -186,12 +186,12 @@ const PINGS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.PINGS = PINGS;
 const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, function* () {
-    var _e, e_2, _f, _g, _h, e_3, _j, _k, _l, e_4, _m, _o;
-    var _p;
+    var _a, e_2, _b, _c, _d, e_3, _e, _f, _g, e_4, _h, _j;
+    var _k;
     console.log("Ubicaciones masivas iniciada...");
     let rows = req.body.rows; // filas que se resiven desde el cliente (filas del excel)
     let idwrh = req.body.idwrh; // id del almacen sobre el que se va a trabajar
-    const replace = (_p = req.body.replace) !== null && _p !== void 0 ? _p : false;
+    const replace = (_k = req.body.replace) !== null && _k !== void 0 ? _k : false;
     let productosNoEncontrados = []; // store para almacen de productos encontrados y no encontrados
     let ubicacionesNoEncontradas = []; // almacen de ubicaciones encontradas y no encontradas
     let filasvacias = []; //almacen para filas que no tienen 
@@ -200,10 +200,10 @@ const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, functi
     let desuniones = []; //almacena las desuniones realizadas
     let yaestaban = []; // uniones que ya existian
     try {
-        for (var _q = true, rows_1 = __asyncValues(rows), rows_1_1; rows_1_1 = yield rows_1.next(), _e = rows_1_1.done, !_e; _q = true) {
-            _g = rows_1_1.value;
-            _q = false;
-            const row = _g;
+        for (var _l = true, rows_1 = __asyncValues(rows), rows_1_1; rows_1_1 = yield rows_1.next(), _a = rows_1_1.done, !_a; _l = true) {
+            _c = rows_1_1.value;
+            _l = false;
+            const row = _c;
             if (row.code && row.location) {
                 const prod = yield Product_1.default.findOne({ where: { code: row.code } }); // busqueda del producto
                 if (prod) {
@@ -223,10 +223,10 @@ const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, functi
                         }
                     }
                     try {
-                        for (var _r = true, paths_1 = (e_3 = void 0, __asyncValues(paths)), paths_1_1; paths_1_1 = yield paths_1.next(), _h = paths_1_1.done, !_h; _r = true) {
-                            _k = paths_1_1.value;
-                            _r = false;
-                            const path = _k;
+                        for (var _m = true, paths_1 = (e_3 = void 0, __asyncValues(paths)), paths_1_1; paths_1_1 = yield paths_1.next(), _d = paths_1_1.done, !_d; _m = true) {
+                            _f = paths_1_1.value;
+                            _m = false;
+                            const path = _f;
                             const location = yield WarehouseSectionsMD_1.default.findOne({ where: { path, _celler: idwrh } }); // se valida laexistencia de la ubicacion
                             location ?
                                 porunir.push({ code: product.code, _product: product.id, _location: location.id, path }) : // producto y ubicacion que si pueden asociadas
@@ -236,7 +236,7 @@ const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, functi
                     catch (e_3_1) { e_3 = { error: e_3_1 }; }
                     finally {
                         try {
-                            if (!_r && !_h && (_j = paths_1.return)) yield _j.call(paths_1);
+                            if (!_m && !_d && (_e = paths_1.return)) yield _e.call(paths_1);
                         }
                         finally { if (e_3) throw e_3.error; }
                     }
@@ -253,15 +253,15 @@ const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, functi
     catch (e_2_1) { e_2 = { error: e_2_1 }; }
     finally {
         try {
-            if (!_q && !_e && (_f = rows_1.return)) yield _f.call(rows_1);
+            if (!_l && !_a && (_b = rows_1.return)) yield _b.call(rows_1);
         }
         finally { if (e_2) throw e_2.error; }
     }
     try {
-        for (var _s = true, porunir_1 = __asyncValues(porunir), porunir_1_1; porunir_1_1 = yield porunir_1.next(), _l = porunir_1_1.done, !_l; _s = true) {
-            _o = porunir_1_1.value;
-            _s = false;
-            const row = _o;
+        for (var _o = true, porunir_1 = __asyncValues(porunir), porunir_1_1; porunir_1_1 = yield porunir_1.next(), _g = porunir_1_1.done, !_g; _o = true) {
+            _j = porunir_1_1.value;
+            _o = false;
+            const row = _j;
             const exAsoc = yield ProductLocationsMD_1.default.findOne({ where: { _product: row._product, _location: row._location } }); // validacion de existencia de asociacion
             if (!exAsoc) { // la asosiacion no existe 
                 const Asoc = yield ProductLocationsMD_1.default.create({ _product: row._product, _location: row._location }); // inserta/crea la asociacion de producto vs ubicacion
@@ -275,7 +275,7 @@ const MASSIVELOCATIONS = (req, resp) => __awaiter(void 0, void 0, void 0, functi
     catch (e_4_1) { e_4 = { error: e_4_1 }; }
     finally {
         try {
-            if (!_s && !_l && (_m = porunir_1.return)) yield _m.call(porunir_1);
+            if (!_o && !_g && (_h = porunir_1.return)) yield _h.call(porunir_1);
         }
         finally { if (e_4) throw e_4.error; }
     }
