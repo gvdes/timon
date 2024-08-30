@@ -227,7 +227,7 @@ export const SYNCAGENTS = async(req:Request, resp:Response) => {
                 }else{ return resp.status(400).json({"Error":`La fecha de inicio no es una fecha valida, utiliza el siguiente formato: AAAA/MM/DD (ej. 2001/01/15)`}); }
     
                 qagents = `SELECT * FROM F_AGE WHERE FALAGE Between #${from}# and #${to}#;`;
-                qdeps = `SELECT T_DEP.* FROM T_DEP INNER JOIN F_AGE ON F_AGE.CODAGE = T_DEP.CODDEP WHERE F_AGE.FALAGE Between #${from}# and #${to}#;`;
+                qdeps = `SELECT CODDEP,NOMDEP,PERDEP,IMADEP,CLADEP,CCLDEP,ESTDEP,AGEDEP,IDIDEP FROM T_DEP INNER JOIN F_AGE ON F_AGE.CODAGE = T_DEP.CODDEP WHERE F_AGE.FALAGE Between #${from}# and #${to}#;`;
             }else{
                 from = today; // desde
                 to = today;// hasta
