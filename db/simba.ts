@@ -104,7 +104,7 @@ export const SIMBA = async()=>{
             }
 
             if(CEDISBRArows.length){
-                console.log("Sincronizando CEDIS BOLIVIA...");
+                console.log("Sincronizando CEDIS BRASIL...");
                 for await (const row of CEDISBRArows) {
                     const [results]:any = await vizapi.query(`
                         UPDATE product_stock STO
@@ -125,7 +125,7 @@ export const SIMBA = async()=>{
             console.log("CEDISPAN:",CEDISTCOrows.length," UPDATEDS:",rset.TCO.length);
             console.log("CEDISBOL:",CEDISBOLrows.length," UPDATEDS:",rset.BOL.length);
             console.log("CEDISTCO:",CEDISPANrows.length," UPDATEDS:",rset.PAN.length);
-            console.log("CEDISTCO:",CEDISBRArows.length," UPDATEDS:",rset.BRA.length);
+            console.log("CEDISBRA:",CEDISBRArows.length," UPDATEDS:",rset.BRA.length);
     
     
             const simbaends = `[${moment().format("YYYY/MM/DD h:mm:ss")}]: Simba ha finalizado, siguiente vuelta en 10 segundos...`;

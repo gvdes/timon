@@ -172,7 +172,7 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
                 }
             }
             if (CEDISBRArows.length) {
-                console.log("Sincronizando CEDIS BOLIVIA...");
+                console.log("Sincronizando CEDIS BRASIL...");
                 try {
                     for (var _v = true, CEDISBRArows_1 = __asyncValues(CEDISBRArows), CEDISBRArows_1_1; CEDISBRArows_1_1 = yield CEDISBRArows_1.next(), _o = CEDISBRArows_1_1.done, !_o; _v = true) {
                         _q = CEDISBRArows_1_1.value;
@@ -206,7 +206,7 @@ const SIMBA = () => __awaiter(void 0, void 0, void 0, function* () {
             console.log("CEDISPAN:", CEDISTCOrows.length, " UPDATEDS:", rset.TCO.length);
             console.log("CEDISBOL:", CEDISBOLrows.length, " UPDATEDS:", rset.BOL.length);
             console.log("CEDISTCO:", CEDISPANrows.length, " UPDATEDS:", rset.PAN.length);
-            console.log("CEDISTCO:", CEDISBRArows.length, " UPDATEDS:", rset.BRA.length);
+            console.log("CEDISBRA:", CEDISBRArows.length, " UPDATEDS:", rset.BRA.length);
             const simbaends = `[${(0, moment_1.default)().format("YYYY/MM/DD h:mm:ss")}]: Simba ha finalizado, siguiente vuelta en 10 segundos...`;
             console.timeEnd('UPDATEDS');
             console.log(`${simbaends}\n`);
